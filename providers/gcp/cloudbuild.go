@@ -2,9 +2,12 @@ package gcp
 
 import (
 	"context"
+	"fmt"
 
-	cloudbuild "cloud.google.com/go/cloudbuild/apiv1"
-	pb "google.golang.org/genproto/googleapis/devtools/cloudbuild/v1"
+	cloudbuild "cloud.google.com/go/cloudbuild/apiv1/v2"
+	pb "cloud.google.com/go/cloudbuild/apiv1/v2/cloudbuildpb"
+	"google.golang.org/api/compute/v1"
+	"google.golang.org/api/iterator"
 
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 )
@@ -25,28 +28,28 @@ func (g *CloudBuildGenerator) InitResources() error {
 	}
 
 	var (
-		triggers      []*pb.BuildTrigger
-		nextPageToken string
+		triggers []*pb.BuildTrigger
 	)
 
-	for {
-		req := &pb.ListBuildTriggersRequest{
-			ProjectId: g.GetArgs()["project"].(string),
-			PageToken: nextPageToken,
-			PageSize:  cbMaxPageSize,
-		}
+	req := &pb.ListBuildTriggersRequest{
+		ProjectId: g.GetArgs()["project"].(string),
+	}
 
-		res, err := c.ListBuildTriggers(ctx, req)
+	if g.GetArgs()["region"].(compute.Region).Name != "" {
+		req.Parent = fmt.Sprintf("projects/%s/locations/%s", g.GetArgs()["project"].(string), g.GetArgs()["region"].(compute.Region).Name)
+	}
+
+	it := c.ListBuildTriggers(ctx, req)
+	for {
+		trigger, err := it.Next()
+		if err == iterator.Done {
+			break
+		}
 		if err != nil {
 			return err
 		}
 
-		triggers = append(triggers, res.Triggers...)
-		nextPageToken = res.NextPageToken
-
-		if nextPageToken == "" {
-			break
-		}
+		triggers = append(triggers, trigger)
 	}
 
 	g.Resources = g.createBuildTriggers(triggers)
@@ -63,14 +66,22 @@ func (g *CloudBuildGenerator) createBuildTriggers(triggers []*pb.BuildTrigger) [
 			"google_cloudbuild_trigger",
 			g.ProviderName,
 			map[string]string{
-				"project": g.GetArgs()["project"].(string),
+				"project":    g.GetArgs()["project"].(string),
+				"location":   g.getLocation(),
+				"trigger_id": trigger.GetId(),
 			},
 			[]string{},
-			map[string]interface{}{
-				"filename": trigger.GetFilename(),
-			},
+			map[string]interface{}{},
 		))
 	}
 
 	return resources
+}
+
+func (g *CloudBuildGenerator) getLocation() string {
+	if g.GetArgs()["region"].(compute.Region).Name != "" {
+		return g.GetArgs()["region"].(compute.Region).Name
+	}
+
+	return "global"
 }
