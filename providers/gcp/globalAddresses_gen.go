@@ -62,6 +62,12 @@ func (g GlobalAddressesGenerator) createResources(ctx context.Context, globalAdd
 // from each globalAddresses create 1 TerraformResource
 // Need globalAddresses name as ID for terraform resource
 func (g *GlobalAddressesGenerator) InitResources() error {
+
+	// A global resource should only be fetched once
+	if g.GetArgs()["region"].(compute.Region).Name != "" && g.GetArgs()["region"].(compute.Region).Name != "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

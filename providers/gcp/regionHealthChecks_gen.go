@@ -62,6 +62,7 @@ func (g RegionHealthChecksGenerator) createResources(ctx context.Context, region
 // from each regionHealthChecks create 1 TerraformResource
 // Need regionHealthChecks name as ID for terraform resource
 func (g *RegionHealthChecksGenerator) InitResources() error {
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

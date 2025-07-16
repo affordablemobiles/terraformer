@@ -62,6 +62,7 @@ func (g ForwardingRulesGenerator) createResources(ctx context.Context, forwardin
 // from each forwardingRules create 1 TerraformResource
 // Need forwardingRules name as ID for terraform resource
 func (g *ForwardingRulesGenerator) InitResources() error {
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

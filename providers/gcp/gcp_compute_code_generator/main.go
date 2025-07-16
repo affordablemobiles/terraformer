@@ -97,6 +97,12 @@ func (g {{.titleResourceName}}Generator) createResources(ctx context.Context, {{
 // from each {{.resource}} create 1 TerraformResource
 // Need {{.resource}} name as ID for terraform resource
 func (g *{{.titleResourceName}}Generator) InitResources() error {
+	{{ if .isGlobal }}
+    // A global resource should only be fetched once
+    if g.GetArgs()["region"].(compute.Region).Name != "" && g.GetArgs()["region"].(compute.Region).Name != "global" {
+        return nil
+    }
+    {{ end }}
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {
@@ -151,7 +157,7 @@ var ComputeServices = map[string]terraformutils.ServiceGenerator{
 `
 
 func main() {
-	computeAPIData, err := os.ReadFile(os.Getenv("GOPATH") + "/src/google.golang.org/api/compute/v1/compute-api.json") // TODO delete this hack
+	computeAPIData, err := os.ReadFile(os.Getenv("VENDORPATH") + "/google.golang.org/api/compute/v1/compute-api.json") // TODO delete this hack
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -171,16 +177,24 @@ func main() {
 		}
 		if value, exist := v.(map[string]interface{})["methods"].(map[string]interface{})["list"]; exist {
 			parameters := []string{}
+			isRegional := false
+			isZonal := false
 			for _, param := range value.(map[string]interface{})["parameterOrder"].([]interface{}) {
-				switch param.(string) {
+				paramStr := param.(string)
+				switch paramStr {
 				case "region":
 					parameters = append(parameters, `g.GetArgs()["region"].(compute.Region).Name`)
+					isRegional = true
 				case "project":
 					parameters = append(parameters, `g.GetArgs()["project"].(string)`)
 				case "zone":
 					parameters = append(parameters, `g.GetArgs()["zone"].(string)`)
+					isZonal = true
 				}
 			}
+			// A resource is global if it is NOT regional and NOT zonal
+			isGlobal := !isRegional && !isZonal
+
 			parameterOrder := strings.Join(parameters, ", ")
 			var tpl bytes.Buffer
 			t := template.Must(template.New("resource.go").Funcs(funcMap).Parse(serviceTemplate))
@@ -195,6 +209,7 @@ func main() {
 				"needRegion":                 terraformResources[resource].ifNeedRegion(),
 				"resourcePackageName":        resource,
 				"parameterOrder":             parameterOrder,
+				"isGlobal":                   isGlobal,
 				"byZone":                     terraformResources[resource].ifNeedZone(strings.Contains(parameterOrder, "zone")),
 				"idWithZone":                 terraformResources[resource].ifIDWithZone(strings.Contains(parameterOrder, "zone")),
 			})

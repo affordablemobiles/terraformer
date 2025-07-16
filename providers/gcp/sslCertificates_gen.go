@@ -62,6 +62,12 @@ func (g SslCertificatesGenerator) createResources(ctx context.Context, sslCertif
 // from each sslCertificates create 1 TerraformResource
 // Need sslCertificates name as ID for terraform resource
 func (g *SslCertificatesGenerator) InitResources() error {
+
+	// A global resource should only be fetched once
+	if g.GetArgs()["region"].(compute.Region).Name != "" && g.GetArgs()["region"].(compute.Region).Name != "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

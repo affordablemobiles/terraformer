@@ -62,6 +62,7 @@ func (g RegionTargetHttpsProxiesGenerator) createResources(ctx context.Context, 
 // from each regionTargetHttpsProxies create 1 TerraformResource
 // Need regionTargetHttpsProxies name as ID for terraform resource
 func (g *RegionTargetHttpsProxiesGenerator) InitResources() error {
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

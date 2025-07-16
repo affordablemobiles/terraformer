@@ -62,6 +62,7 @@ func (g RegionDisksGenerator) createResources(ctx context.Context, regionDisksLi
 // from each regionDisks create 1 TerraformResource
 // Need regionDisks name as ID for terraform resource
 func (g *RegionDisksGenerator) InitResources() error {
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

@@ -62,6 +62,12 @@ func (g ImagesGenerator) createResources(ctx context.Context, imagesList *comput
 // from each images create 1 TerraformResource
 // Need images name as ID for terraform resource
 func (g *ImagesGenerator) InitResources() error {
+
+	// A global resource should only be fetched once
+	if g.GetArgs()["region"].(compute.Region).Name != "" && g.GetArgs()["region"].(compute.Region).Name != "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

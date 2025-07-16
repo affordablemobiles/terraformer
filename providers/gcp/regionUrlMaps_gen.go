@@ -62,6 +62,7 @@ func (g RegionUrlMapsGenerator) createResources(ctx context.Context, regionUrlMa
 // from each regionUrlMaps create 1 TerraformResource
 // Need regionUrlMaps name as ID for terraform resource
 func (g *RegionUrlMapsGenerator) InitResources() error {
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

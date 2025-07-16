@@ -64,6 +64,7 @@ func (g NodeGroupsGenerator) createResources(ctx context.Context, nodeGroupsList
 // from each nodeGroups create 1 TerraformResource
 // Need nodeGroups name as ID for terraform resource
 func (g *NodeGroupsGenerator) InitResources() error {
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

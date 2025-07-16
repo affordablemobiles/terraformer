@@ -62,6 +62,12 @@ func (g SecurityPoliciesGenerator) createResources(ctx context.Context, security
 // from each securityPolicies create 1 TerraformResource
 // Need securityPolicies name as ID for terraform resource
 func (g *SecurityPoliciesGenerator) InitResources() error {
+
+	// A global resource should only be fetched once
+	if g.GetArgs()["region"].(compute.Region).Name != "" && g.GetArgs()["region"].(compute.Region).Name != "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

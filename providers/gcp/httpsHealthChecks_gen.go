@@ -62,6 +62,12 @@ func (g HttpsHealthChecksGenerator) createResources(ctx context.Context, httpsHe
 // from each httpsHealthChecks create 1 TerraformResource
 // Need httpsHealthChecks name as ID for terraform resource
 func (g *HttpsHealthChecksGenerator) InitResources() error {
+
+	// A global resource should only be fetched once
+	if g.GetArgs()["region"].(compute.Region).Name != "" && g.GetArgs()["region"].(compute.Region).Name != "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

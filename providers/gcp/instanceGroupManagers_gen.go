@@ -64,6 +64,7 @@ func (g InstanceGroupManagersGenerator) createResources(ctx context.Context, ins
 // from each instanceGroupManagers create 1 TerraformResource
 // Need instanceGroupManagers name as ID for terraform resource
 func (g *InstanceGroupManagersGenerator) InitResources() error {
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

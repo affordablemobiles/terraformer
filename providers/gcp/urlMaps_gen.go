@@ -62,6 +62,12 @@ func (g UrlMapsGenerator) createResources(ctx context.Context, urlMapsList *comp
 // from each urlMaps create 1 TerraformResource
 // Need urlMaps name as ID for terraform resource
 func (g *UrlMapsGenerator) InitResources() error {
+
+	// A global resource should only be fetched once
+	if g.GetArgs()["region"].(compute.Region).Name != "" && g.GetArgs()["region"].(compute.Region).Name != "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

@@ -62,6 +62,7 @@ func (g TargetPoolsGenerator) createResources(ctx context.Context, targetPoolsLi
 // from each targetPools create 1 TerraformResource
 // Need targetPools name as ID for terraform resource
 func (g *TargetPoolsGenerator) InitResources() error {
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

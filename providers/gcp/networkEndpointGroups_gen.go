@@ -64,6 +64,7 @@ func (g NetworkEndpointGroupsGenerator) createResources(ctx context.Context, net
 // from each networkEndpointGroups create 1 TerraformResource
 // Need networkEndpointGroups name as ID for terraform resource
 func (g *NetworkEndpointGroupsGenerator) InitResources() error {
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

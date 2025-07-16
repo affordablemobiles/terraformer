@@ -62,6 +62,7 @@ func (g TargetVpnGatewaysGenerator) createResources(ctx context.Context, targetV
 // from each targetVpnGateways create 1 TerraformResource
 // Need targetVpnGateways name as ID for terraform resource
 func (g *TargetVpnGatewaysGenerator) InitResources() error {
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

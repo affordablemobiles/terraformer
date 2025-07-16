@@ -62,6 +62,12 @@ func (g InstanceTemplatesGenerator) createResources(ctx context.Context, instanc
 // from each instanceTemplates create 1 TerraformResource
 // Need instanceTemplates name as ID for terraform resource
 func (g *InstanceTemplatesGenerator) InitResources() error {
+
+	// A global resource should only be fetched once
+	if g.GetArgs()["region"].(compute.Region).Name != "" && g.GetArgs()["region"].(compute.Region).Name != "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

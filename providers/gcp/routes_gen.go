@@ -62,6 +62,12 @@ func (g RoutesGenerator) createResources(ctx context.Context, routesList *comput
 // from each routes create 1 TerraformResource
 // Need routes name as ID for terraform resource
 func (g *RoutesGenerator) InitResources() error {
+
+	// A global resource should only be fetched once
+	if g.GetArgs()["region"].(compute.Region).Name != "" && g.GetArgs()["region"].(compute.Region).Name != "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {
