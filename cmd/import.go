@@ -109,8 +109,34 @@ func Import(provider terraformutils.ProviderGenerator, options ImportOptions, ar
 	providerMapping.CleanupProviders()
 
 	err = importFromPlan(providerMapping, options, args)
+	if err != nil {
+		return err
+	}
 
-	return err
+	log.Println("Performing cleanup of stale directories based on path pattern...")
+
+	// We iterate over the original list of services the user requested for this run.
+	for _, serviceName := range options.Resources {
+		resourcesForService := providerMapping.GetResourcesByService()[serviceName]
+
+		// If a requested service resulted in zero resources...
+		if len(resourcesForService) == 0 {
+			// ...we build its exact expected path using the SAME logic Terraformer uses.
+			servicePath := Path(options.PathPattern, provider.GetName(), serviceName, options.PathOutput)
+
+			// Check if that path actually exists on disk.
+			if _, err := os.Stat(servicePath); !os.IsNotExist(err) {
+				// It exists but is now empty, so remove it.
+				log.Printf("Removing stale directory for service '%s': %s", serviceName, servicePath)
+				if err := os.RemoveAll(servicePath); err != nil {
+					log.Printf("! Failed to remove stale directory %s: %v", servicePath, err)
+				}
+			}
+		}
+	}
+	log.Println("Cleanup complete. ✅")
+
+	return nil
 }
 
 func initOptionsAndWrapper(provider terraformutils.ProviderGenerator, options ImportOptions, args []string) (*providerwrapper.ProviderWrapper, ImportOptions, error) {
@@ -239,6 +265,10 @@ func ImportFromPlan(provider terraformutils.ProviderGenerator, plan *ImportPlan)
 		}
 	} else {
 		for serviceName, resources := range importedResource {
+			if len(resources) == 0 {
+				log.Printf("%s: No resources found for service %s. Skipping file output.", provider.GetName(), serviceName)
+				continue // Go to the next service
+			}
 			e := printService(provider, serviceName, options, resources, importedResource)
 			if e != nil {
 				return e
