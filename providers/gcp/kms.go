@@ -74,8 +74,9 @@ func (g *KmsGenerator) createKmsKeyResources(ctx context.Context, keyRingName st
 				"google_kms_crypto_key",
 				g.ProviderName,
 				map[string]string{
-					"project": g.GetArgs()["project"].(string),
-					"name":    key.Name,
+					"project":  g.GetArgs()["project"].(string),
+					"key_ring": keyRingName,
+					"name":     tm[7],
 				},
 				kmsAllowEmptyValues,
 				kmsAdditionalFields,
