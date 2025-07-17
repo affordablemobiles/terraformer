@@ -21,6 +21,7 @@ import (
 
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 	"google.golang.org/api/bigquery/v2"
+	"google.golang.org/api/compute/v1"
 )
 
 var bigQueryAllowEmptyValues = []string{""}
@@ -93,6 +94,10 @@ func (g *BigQueryGenerator) createResourcesTables(ctx context.Context, datasetID
 
 // Generate TerraformResources from GCP API,
 func (g *BigQueryGenerator) InitResources() error {
+	if g.GetArgs()["region"].(compute.Region).Name != "" && g.GetArgs()["region"].(compute.Region).Name != "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	bigQueryService, err := bigquery.NewService(ctx)
 	if err != nil {

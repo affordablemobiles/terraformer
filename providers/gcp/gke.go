@@ -19,9 +19,11 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 
+	"google.golang.org/api/compute/v1"
 	container "google.golang.org/api/container/v1beta1"
 )
 
@@ -33,9 +35,9 @@ type GkeGenerator struct {
 	GCPService
 }
 
-func (g *GkeGenerator) initClusters(clusters *container.ListClustersResponse) []terraformutils.Resource {
+func (g *GkeGenerator) initClusters(clusters []*container.Cluster) []terraformutils.Resource {
 	resources := []terraformutils.Resource{}
-	for _, cluster := range clusters.Clusters {
+	for _, cluster := range clusters {
 		if _, exist := cluster.ResourceLabels["goog-composer-environment"]; exist { // don't manage composer clusters
 			continue
 		}
@@ -92,6 +94,10 @@ func (g *GkeGenerator) initNodePools(nodePools []*container.NodePool, clusterNam
 
 // Generate TerraformResources from GCP API,
 func (g *GkeGenerator) InitResources() error {
+	if g.GetArgs()["region"].(compute.Region).Name == "" || g.GetArgs()["region"].(compute.Region).Name == "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	service, err := container.NewService(ctx)
 	if err != nil {
@@ -99,14 +105,24 @@ func (g *GkeGenerator) InitResources() error {
 		return err
 	}
 	// GKE support zone and regional cluster, api use location, it's can be region or zone, for all "-"
-	location := fmt.Sprintf("projects/%s/locations/%s", g.GetArgs()["project"].(string), "-")
-	clusters, err := service.Projects.Locations.Clusters.List(location).Do()
-	if err != nil {
-		log.Print(err)
-		return err
+	clusterList := []*container.Cluster{}
+	region := g.GetArgs()["region"].(compute.Region)
+	locationList := []string{region.Name}
+	for _, zone := range region.Zones {
+		locationList = append(locationList, zone[strings.LastIndex(zone, "/")+1:])
 	}
 
-	g.Resources = g.initClusters(clusters)
+	for _, location := range locationList {
+		location := fmt.Sprintf("projects/%s/locations/%s", g.GetArgs()["project"].(string), location)
+		clusters, err := service.Projects.Locations.Clusters.List(location).Do()
+		if err != nil {
+			log.Print(err)
+			return err
+		}
+		clusterList = append(clusterList, clusters.Clusters...)
+	}
+
+	g.Resources = g.initClusters(clusterList)
 	return nil
 }
 

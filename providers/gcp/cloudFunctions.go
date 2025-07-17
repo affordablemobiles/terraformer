@@ -96,6 +96,10 @@ func (g CloudFunctionsGenerator) createCloudFunctions2ndGenResources(ctx context
 // from each CloudFunctions create 1 TerraformResource
 // Need CloudFunctions name as ID for terraform resource
 func (g *CloudFunctionsGenerator) InitResources() error {
+	if g.GetArgs()["region"].(compute.Region).Name == "" || g.GetArgs()["region"].(compute.Region).Name == "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	cloudfunctionsService, err := cloudfunctions.NewService(ctx)
 	if err != nil {

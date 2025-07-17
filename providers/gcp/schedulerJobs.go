@@ -63,6 +63,10 @@ func (g SchedulerJobsGenerator) createResources(ctx context.Context, jobsList *c
 
 // Generate TerraformResources from GCP API,
 func (g *SchedulerJobsGenerator) InitResources() error {
+	if g.GetArgs()["region"].(compute.Region).Name == "" || g.GetArgs()["region"].(compute.Region).Name == "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	cloudSchedulerService, err := cloudscheduler.NewService(ctx)
 	if err != nil {

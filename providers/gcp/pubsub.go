@@ -19,6 +19,7 @@ import (
 	"log"
 	"strings"
 
+	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/pubsub/v1"
 
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
@@ -88,6 +89,10 @@ func (g PubsubGenerator) createTopicsListResources(ctx context.Context, topicsLi
 
 // Generate TerraformResources from GCP API,
 func (g *PubsubGenerator) InitResources() error {
+	if g.GetArgs()["region"].(compute.Region).Name != "" && g.GetArgs()["region"].(compute.Region).Name != "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	pubsubService, err := pubsub.NewService(ctx)
 	if err != nil {

@@ -20,6 +20,7 @@ import (
 
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 
+	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/iterator"
 
 	monitoring "cloud.google.com/go/monitoring/apiv3" // nolint
@@ -182,6 +183,10 @@ func (g *MonitoringGenerator) loadUptimeCheck(ctx context.Context, project strin
 // from each alert  create 1 TerraformResource
 // Need alert name as ID for terraform resource
 func (g *MonitoringGenerator) InitResources() error {
+	if g.GetArgs()["region"].(compute.Region).Name != "" && g.GetArgs()["region"].(compute.Region).Name != "global" {
+		return nil
+	}
+
 	project := g.GetArgs()["project"].(string)
 	ctx := context.Background()
 

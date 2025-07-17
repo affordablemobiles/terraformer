@@ -18,11 +18,16 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 
+	"google.golang.org/api/compute/v1"
+	"google.golang.org/api/option"
 	"google.golang.org/api/storage/v1"
+	"google.golang.org/api/storagetransfer/v1"
 )
 
 var GcsAllowEmptyValues = []string{"labels.", "created_before"}
@@ -34,10 +39,16 @@ type GcsGenerator struct {
 }
 
 func (g *GcsGenerator) createBucketsResources(ctx context.Context, gcsService *storage.Service) []terraformutils.Resource {
+	isGlobal := g.GetArgs()["region"].(compute.Region).Name == "" || g.GetArgs()["region"].(compute.Region).Name == "global"
+
 	resources := []terraformutils.Resource{}
 	bucketList := gcsService.Buckets.List(g.GetArgs()["project"].(string))
 	if err := bucketList.Pages(ctx, func(page *storage.Buckets) error {
 		for _, bucket := range page.Items {
+			isBucketRegional := slices.Contains(g.GetArgs()["regions"].([]string), strings.ToLower(bucket.Location))
+			if isGlobal == isBucketRegional {
+				continue
+			}
 			resources = append(resources, terraformutils.NewResource(
 				bucket.Name,
 				bucket.Name,
@@ -150,10 +161,11 @@ func (g *GcsGenerator) createNotificationResources(gcsService *storage.Service, 
 	return resources
 }
 
-/*
 func (g *GcsGenerator) createTransferJobsResources(ctx context.Context, storageTransferService *storagetransfer.Service) []terraformutils.Resource {
 	resources := []terraformutils.Resource{}
-	transferJobsList := storageTransferService.TransferJobs.List()
+	projectID := g.GetArgs()["project"].(string)
+	filter := fmt.Sprintf(`{"projectId":"%s"}`, projectID)
+	transferJobsList := storageTransferService.TransferJobs.List(filter)
 	err := transferJobsList.Pages(ctx, func(page *storagetransfer.ListTransferJobsResponse) error {
 		log.Println(page.TransferJobs)
 		for _, transferJob := range page.TransferJobs {
@@ -172,17 +184,18 @@ func (g *GcsGenerator) createTransferJobsResources(ctx context.Context, storageT
 		return nil
 	})
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	return resources
 }
-*/
 
 // Generate TerraformResources from GCP API,
 // from each bucket  create 1 TerraformResource
 // Need bucket name as ID for terraform resource
 func (g *GcsGenerator) InitResources() error {
 	ctx := context.Background()
+	projectID := g.GetArgs()["project"].(string)
+
 	gcsService, err := storage.NewService(ctx)
 	if err != nil {
 		log.Print(err)
@@ -190,13 +203,12 @@ func (g *GcsGenerator) InitResources() error {
 	}
 	g.Resources = g.createBucketsResources(ctx, gcsService)
 
-	// TODO find bug with storageTransferService.TransferJobs.List().Pages
-	// storageTransferService, err := storagetransfer.NewService(ctx)
-	// if err != nil {
-	// 	log.Print(err)
-	// 		return err
-	// 	}
-	// g.Resources = append(g.Resources, g.createTransferJobsResources(ctx, storageTransferService)...)
+	storageTransferService, err := storagetransfer.NewService(ctx, option.WithQuotaProject(projectID))
+	if err != nil {
+		log.Print(err)
+		return err
+	}
+	g.Resources = append(g.Resources, g.createTransferJobsResources(ctx, storageTransferService)...)
 	return nil
 }
 

@@ -65,6 +65,10 @@ func (g MemoryStoreGenerator) createResources(ctx context.Context, redisInstance
 // from each redis create 1 TerraformResource
 // Need Redis name as ID for terraform resource
 func (g *MemoryStoreGenerator) InitResources() error {
+	if g.GetArgs()["region"].(compute.Region).Name == "" || g.GetArgs()["region"].(compute.Region).Name == "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	redisService, err := redis.NewService(ctx)
 	if err != nil {

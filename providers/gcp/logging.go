@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/iterator"
 
 	"cloud.google.com/go/logging/logadmin"
@@ -61,6 +62,10 @@ func (g *LoggingGenerator) loadLoggingMetrics(ctx context.Context, client *logad
 
 // Generate TerraformResources from GCP API
 func (g *LoggingGenerator) InitResources() error {
+	if g.GetArgs()["region"].(compute.Region).Name != "" && g.GetArgs()["region"].(compute.Region).Name != "global" {
+		return nil
+	}
+
 	project := g.GetArgs()["project"].(string)
 	ctx := context.Background()
 	client, err := logadmin.NewClient(ctx, project)

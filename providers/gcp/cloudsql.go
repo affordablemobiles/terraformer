@@ -16,9 +16,11 @@ package gcp
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 
+	"google.golang.org/api/compute/v1"
 	sqladmin "google.golang.org/api/sqladmin/v1beta4"
 )
 
@@ -31,7 +33,13 @@ type CloudSQLGenerator struct {
 }
 
 func (g *CloudSQLGenerator) loadDBInstances(svc *sqladmin.Service, project string) error {
-	dbInstances, err := svc.Instances.List(project).Do()
+	if g.GetArgs()["region"].(compute.Region).Name == "" || g.GetArgs()["region"].(compute.Region).Name == "global" {
+		return nil
+	}
+
+	dbInstances, err := svc.Instances.List(project).Filter(
+		fmt.Sprintf("region:%s", g.GetArgs()["region"].(compute.Region).Name),
+	).Do()
 	if err != nil {
 		return err
 	}

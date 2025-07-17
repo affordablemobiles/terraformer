@@ -33,6 +33,7 @@ var (
 type GCPProvider struct { //nolint
 	terraformutils.Provider
 	projectName  string
+	regions      []string
 	region       compute.Region
 	providerType string
 }
@@ -85,6 +86,7 @@ func (p *GCPProvider) Init(args []string) error {
 	}
 	p.projectName = projectName
 	var err error
+	p.regions = GetRegions(projectName)
 	p.region, err = getRegion(projectName, args[0])
 	if err != nil {
 		return err
@@ -111,6 +113,7 @@ func (p *GCPProvider) InitService(serviceName string, verbose bool) error {
 	p.Service.SetProviderName(p.GetName())
 	p.Service.SetArgs(map[string]interface{}{
 		"region":  p.region,
+		"regions": p.regions,
 		"project": p.projectName,
 	})
 	return nil
@@ -118,7 +121,7 @@ func (p *GCPProvider) InitService(serviceName string, verbose bool) error {
 
 // GetGCPSupportService return map of support service for GCP
 func (p *GCPProvider) GetSupportedService() map[string]terraformutils.ServiceGenerator {
-	services := ComputeServices
+	services := GetComputeServices()
 	services["bigQuery"] = &GCPFacade{service: &BigQueryGenerator{}}
 	services["cloudFunctions"] = &GCPFacade{service: &CloudFunctionsGenerator{}}
 	services["cloudsql"] = &GCPFacade{service: &CloudSQLGenerator{}}

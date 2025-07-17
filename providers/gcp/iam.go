@@ -21,6 +21,7 @@ import (
 
 	admin "cloud.google.com/go/iam/admin/apiv1"
 	"google.golang.org/api/cloudresourcemanager/v1"
+	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/iterator"
 	adminpb "google.golang.org/genproto/googleapis/iam/admin/v1"
 
@@ -112,6 +113,10 @@ func (g *IamGenerator) createIamMemberResources(policy *cloudresourcemanager.Pol
 }
 
 func (g *IamGenerator) InitResources() error {
+	if g.GetArgs()["region"].(compute.Region).Name != "" && g.GetArgs()["region"].(compute.Region).Name != "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 
 	projectID := g.GetArgs()["project"].(string)

@@ -22,6 +22,7 @@ import (
 
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 
+	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/dns/v1"
 )
 
@@ -93,6 +94,10 @@ func (g CloudDNSGenerator) createRecordsResources(ctx context.Context, svc *dns.
 // Generate TerraformResources from GCP API,
 // create terraform resource for each zone + each record
 func (g *CloudDNSGenerator) InitResources() error {
+	if g.GetArgs()["region"].(compute.Region).Name != "" && g.GetArgs()["region"].(compute.Region).Name != "global" {
+		return nil
+	}
+
 	project := g.GetArgs()["project"].(string)
 	ctx := context.Background()
 	svc, err := dns.NewService(ctx)

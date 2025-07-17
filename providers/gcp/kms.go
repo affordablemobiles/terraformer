@@ -17,9 +17,11 @@ package gcp
 import (
 	"context"
 	"log"
+	"slices"
 	"strings"
 
 	"google.golang.org/api/cloudkms/v1"
+	"google.golang.org/api/compute/v1"
 
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 )
@@ -94,9 +96,35 @@ func (g *KmsGenerator) InitResources() error {
 		return err
 	}
 
-	keyRingList := kmsService.Projects.Locations.KeyRings.List("projects/" + g.GetArgs()["project"].(string) + "/locations/global")
+	var locationsToScan []string
+	isGlobalRun := g.GetArgs()["region"].(compute.Region).Name == "" || g.GetArgs()["region"].(compute.Region).Name == "global"
 
-	g.Resources = g.createKmsRingResources(ctx, keyRingList, kmsService)
+	if isGlobalRun {
+		// For a global run, list all possible locations...
+		listResp, err := kmsService.Projects.Locations.List("projects/" + g.GetArgs()["project"].(string)).Do()
+		if err != nil {
+			return err
+		}
+
+		// ...and add only those that are NOT in our defined regions list.
+		definedRegions := g.GetArgs()["regions"].([]string)
+		for _, loc := range listResp.Locations {
+			if !slices.Contains(definedRegions, loc.LocationId) {
+				locationsToScan = append(locationsToScan, loc.LocationId)
+			}
+		}
+	} else {
+		// For a regional run, the list is just the specified region.
+		locationsToScan = append(locationsToScan, g.GetArgs()["region"].(compute.Region).Name)
+	}
+
+	// Now, iterate over the cleanly-built list of locations
+	for _, location := range locationsToScan {
+		keyRingList := kmsService.Projects.Locations.KeyRings.List("projects/" + g.GetArgs()["project"].(string) + "/locations/" + location)
+
+		g.Resources = append(g.Resources, g.createKmsRingResources(ctx, keyRingList, kmsService)...)
+	}
+
 	return nil
 }
 

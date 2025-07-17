@@ -16,6 +16,7 @@ package gcp
 
 import (
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	"google.golang.org/api/compute/v1"
 )
 
 var projectAllowEmptyValues = []string{""}
@@ -28,6 +29,10 @@ type ProjectGenerator struct {
 
 // Generate TerraformResources from GCP API,
 func (g *ProjectGenerator) InitResources() error {
+	if g.GetArgs()["region"].(compute.Region).Name != "" && g.GetArgs()["region"].(compute.Region).Name != "global" {
+		return nil
+	}
+
 	g.Resources = append(g.Resources, terraformutils.NewResource(
 		g.GetArgs()["project"].(string),
 		g.GetArgs()["project"].(string),
