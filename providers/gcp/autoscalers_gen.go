@@ -65,6 +65,10 @@ func (g AutoscalersGenerator) createResources(ctx context.Context, autoscalersLi
 // Need autoscalers name as ID for terraform resource
 func (g *AutoscalersGenerator) InitResources() error {
 
+	if g.GetArgs()["region"].(compute.Region).Name == "" || g.GetArgs()["region"].(compute.Region).Name == "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

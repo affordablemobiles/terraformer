@@ -63,6 +63,10 @@ func (g VpnTunnelsGenerator) createResources(ctx context.Context, vpnTunnelsList
 // Need vpnTunnels name as ID for terraform resource
 func (g *VpnTunnelsGenerator) InitResources() error {
 
+	if g.GetArgs()["region"].(compute.Region).Name == "" || g.GetArgs()["region"].(compute.Region).Name == "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

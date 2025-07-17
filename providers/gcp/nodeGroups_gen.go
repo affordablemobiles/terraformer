@@ -65,6 +65,10 @@ func (g NodeGroupsGenerator) createResources(ctx context.Context, nodeGroupsList
 // Need nodeGroups name as ID for terraform resource
 func (g *NodeGroupsGenerator) InitResources() error {
 
+	if g.GetArgs()["region"].(compute.Region).Name == "" || g.GetArgs()["region"].(compute.Region).Name == "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

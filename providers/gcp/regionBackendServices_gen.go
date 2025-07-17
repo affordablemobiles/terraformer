@@ -63,6 +63,10 @@ func (g RegionBackendServicesGenerator) createResources(ctx context.Context, reg
 // Need regionBackendServices name as ID for terraform resource
 func (g *RegionBackendServicesGenerator) InitResources() error {
 
+	if g.GetArgs()["region"].(compute.Region).Name == "" || g.GetArgs()["region"].(compute.Region).Name == "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

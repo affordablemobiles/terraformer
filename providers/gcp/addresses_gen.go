@@ -63,6 +63,10 @@ func (g AddressesGenerator) createResources(ctx context.Context, addressesList *
 // Need addresses name as ID for terraform resource
 func (g *AddressesGenerator) InitResources() error {
 
+	if g.GetArgs()["region"].(compute.Region).Name == "" || g.GetArgs()["region"].(compute.Region).Name == "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

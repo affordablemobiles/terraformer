@@ -65,6 +65,10 @@ func (g TargetInstancesGenerator) createResources(ctx context.Context, targetIns
 // Need targetInstances name as ID for terraform resource
 func (g *TargetInstancesGenerator) InitResources() error {
 
+	if g.GetArgs()["region"].(compute.Region).Name == "" || g.GetArgs()["region"].(compute.Region).Name == "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

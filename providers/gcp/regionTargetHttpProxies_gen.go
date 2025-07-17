@@ -63,6 +63,10 @@ func (g RegionTargetHttpProxiesGenerator) createResources(ctx context.Context, r
 // Need regionTargetHttpProxies name as ID for terraform resource
 func (g *RegionTargetHttpProxiesGenerator) InitResources() error {
 
+	if g.GetArgs()["region"].(compute.Region).Name == "" || g.GetArgs()["region"].(compute.Region).Name == "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

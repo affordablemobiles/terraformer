@@ -63,6 +63,10 @@ func (g InterconnectAttachmentsGenerator) createResources(ctx context.Context, i
 // Need interconnectAttachments name as ID for terraform resource
 func (g *InterconnectAttachmentsGenerator) InitResources() error {
 
+	if g.GetArgs()["region"].(compute.Region).Name == "" || g.GetArgs()["region"].(compute.Region).Name == "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

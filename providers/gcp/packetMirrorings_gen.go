@@ -63,6 +63,10 @@ func (g PacketMirroringsGenerator) createResources(ctx context.Context, packetMi
 // Need packetMirrorings name as ID for terraform resource
 func (g *PacketMirroringsGenerator) InitResources() error {
 
+	if g.GetArgs()["region"].(compute.Region).Name == "" || g.GetArgs()["region"].(compute.Region).Name == "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

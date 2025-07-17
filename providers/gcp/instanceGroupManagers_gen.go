@@ -65,6 +65,10 @@ func (g InstanceGroupManagersGenerator) createResources(ctx context.Context, ins
 // Need instanceGroupManagers name as ID for terraform resource
 func (g *InstanceGroupManagersGenerator) InitResources() error {
 
+	if g.GetArgs()["region"].(compute.Region).Name == "" || g.GetArgs()["region"].(compute.Region).Name == "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

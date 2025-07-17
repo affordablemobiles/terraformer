@@ -65,6 +65,10 @@ func (g ReservationsGenerator) createResources(ctx context.Context, reservations
 // Need reservations name as ID for terraform resource
 func (g *ReservationsGenerator) InitResources() error {
 
+	if g.GetArgs()["region"].(compute.Region).Name == "" || g.GetArgs()["region"].(compute.Region).Name == "global" {
+		return nil
+	}
+
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
 	if err != nil {

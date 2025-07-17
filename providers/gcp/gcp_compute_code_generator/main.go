@@ -102,6 +102,10 @@ func (g *{{.titleResourceName}}Generator) InitResources() error {
     if g.GetArgs()["region"].(compute.Region).Name != "" && g.GetArgs()["region"].(compute.Region).Name != "global" {
         return nil
     }
+	{{ else }}
+	if g.GetArgs()["region"].(compute.Region).Name == "" || g.GetArgs()["region"].(compute.Region).Name == "global" {
+        return nil
+    }
     {{ end }}
 	ctx := context.Background()
 	computeService, err := compute.NewService(ctx)
