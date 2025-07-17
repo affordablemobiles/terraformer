@@ -17,11 +17,17 @@ package gcp
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 	"google.golang.org/api/compute/v1"
+)
+
+var (
+	InvalidRegion = errors.New("invalid region specified")
 )
 
 type GCPProvider struct { //nolint
@@ -47,22 +53,25 @@ func GetRegions(project string) []string {
 	return regions
 }
 
-func getRegion(project, regionName string) *compute.Region {
+func getRegion(project, regionName string) (compute.Region, error) {
 	if regionName == "global" {
-		return &compute.Region{}
+		return compute.Region{}, nil
 	}
 	computeService, err := compute.NewService(context.Background())
 	if err != nil {
 		log.Println(err)
-		return &compute.Region{}
+		return compute.Region{}, fmt.Errorf("failed to get region list: %s", err)
 	}
 	regionsGetCall := computeService.Regions.Get(project, regionName).Fields("name", "zones")
 	region, err := regionsGetCall.Do()
 	if err != nil {
+		if strings.Contains(err.Error(), "Unknown region") {
+			return compute.Region{}, InvalidRegion
+		}
 		log.Println(err)
-		return &compute.Region{}
+		return compute.Region{}, fmt.Errorf("failed to get region list: %s", err)
 	}
-	return region
+	return *region, nil
 }
 
 // check projectName in env params
@@ -75,7 +84,11 @@ func (p *GCPProvider) Init(args []string) error {
 		return errors.New("google cloud project name must be set")
 	}
 	p.projectName = projectName
-	p.region = *getRegion(projectName, args[0])
+	var err error
+	p.region, err = getRegion(projectName, args[0])
+	if err != nil {
+		return err
+	}
 	p.providerType = args[2]
 	return nil
 }
