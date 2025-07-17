@@ -1,3 +1,4 @@
+//go:build opsgenie || !single_provider
 package cmd
 
 import (
@@ -6,6 +7,12 @@ import (
 	opsgenie_terraforming "github.com/GoogleCloudPlatform/terraformer/providers/opsgenie"
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 )
+
+// init will automatically register this provider with the global lists.
+func init() {
+	providerImporterSubcommands = append(providerImporterSubcommands, newCmdOpsgenieImporter)
+	providerGenerators["opsgenie"] = newOpsgenieProvider
+}
 
 func newCmdOpsgenieImporter(options ImportOptions) *cobra.Command {
 	var apiKey string

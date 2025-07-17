@@ -60,6 +60,8 @@ const DefaultPathPattern = "{output}/{provider}/{service}/"
 const DefaultPathOutput = "generated"
 const DefaultState = "local"
 
+var providerImporterSubcommands []func(options ImportOptions) *cobra.Command
+
 func newImportCmd() *cobra.Command {
 	options := ImportOptions{}
 	cmd := &cobra.Command{
@@ -77,7 +79,7 @@ func newImportCmd() *cobra.Command {
 		Short: "Don't sort resources",
 		Long:  "Don't sort resources",
 	})
-	for _, subcommand := range providerImporterSubcommands() {
+	for _, subcommand := range providerImporterSubcommands {
 		providerCommand := subcommand(options)
 		_ = providerCommand.MarkPersistentFlagRequired("resources")
 		cmd.AddCommand(providerCommand)

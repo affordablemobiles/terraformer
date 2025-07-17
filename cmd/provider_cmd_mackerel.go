@@ -1,3 +1,4 @@
+//go:build mackerel || !single_provider
 // Copyright 2021 The Terraformer Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +20,12 @@ import (
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 	"github.com/spf13/cobra"
 )
+
+// init will automatically register this provider with the global lists.
+func init() {
+	providerImporterSubcommands = append(providerImporterSubcommands, newCmdMackerelImporter)
+	providerGenerators["mackerel"] = newMackerelProvider
+}
 
 func newCmdMackerelImporter(options ImportOptions) *cobra.Command {
 	var apiKey string

@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -45,7 +45,7 @@ func newPlanCmd() *cobra.Command {
 		//Version:       version.String(),
 	}
 
-	for _, subcommand := range providerImporterSubcommands() {
+	for _, subcommand := range providerImporterSubcommands {
 		cmd.AddCommand(subcommand(options))
 	}
 	return cmd
@@ -64,7 +64,7 @@ func newCmdPlanImporter(options ImportOptions) *cobra.Command {
 			}
 
 			var provider terraformutils.ProviderGenerator
-			if providerGen, ok := providerGenerators()[plan.Provider]; ok {
+			if providerGen, ok := getProviderGenerators()[plan.Provider]; ok {
 				provider = providerGen()
 			} else {
 				return fmt.Errorf("unsupported provider: %s", plan.Provider)

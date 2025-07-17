@@ -1,3 +1,4 @@
+//go:build octopusdeploy || !single_provider
 package cmd
 
 import (
@@ -6,6 +7,12 @@ import (
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 	"github.com/spf13/cobra"
 )
+
+// init will automatically register this provider with the global lists.
+func init() {
+	providerImporterSubcommands = append(providerImporterSubcommands, newCmdOctopusDeployImporter)
+	providerGenerators["octopusdeploy"] = newOctopusDeployProvider
+}
 
 func newCmdOctopusDeployImporter(options ImportOptions) *cobra.Command {
 	var server, apiKey string

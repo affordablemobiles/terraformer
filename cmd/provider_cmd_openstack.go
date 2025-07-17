@@ -1,3 +1,4 @@
+//go:build openstack || !single_provider
 // Copyright 2018 The Terraformer Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +21,12 @@ import (
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 	"github.com/spf13/cobra"
 )
+
+// init will automatically register this provider with the global lists.
+func init() {
+	providerImporterSubcommands = append(providerImporterSubcommands, newCmdOpenStackImporter)
+	providerGenerators["openstack"] = newOpenStackProvider
+}
 
 func newCmdOpenStackImporter(options ImportOptions) *cobra.Command {
 	cmd := &cobra.Command{

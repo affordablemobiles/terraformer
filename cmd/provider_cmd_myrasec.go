@@ -1,3 +1,4 @@
+//go:build myrasec || !single_provider
 package cmd
 
 import (
@@ -5,6 +6,12 @@ import (
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 	"github.com/spf13/cobra"
 )
+
+// init will automatically register this provider with the global lists.
+func init() {
+	providerImporterSubcommands = append(providerImporterSubcommands, newCmdMyrasecImporter)
+	providerGenerators["myrasec"] = newMyrasecProvider
+}
 
 //
 // newCmdMyrasecImporter

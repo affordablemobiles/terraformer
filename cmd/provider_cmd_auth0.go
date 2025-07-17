@@ -1,3 +1,4 @@
+//go:build auth0 || !single_provider
 // Copyright 2019 The Terraformer Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +23,12 @@ import (
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 	"github.com/spf13/cobra"
 )
+
+// init will automatically register this provider with the global lists.
+func init() {
+	providerImporterSubcommands = append(providerImporterSubcommands, newCmdAuth0Importer)
+	providerGenerators["auth0"] = newAuth0Provider
+}
 
 func newCmdAuth0Importer(options ImportOptions) *cobra.Command {
 	cmd := &cobra.Command{
