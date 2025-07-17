@@ -93,18 +93,33 @@ func (g *IamGenerator) createIamMemberResources(policy *cloudresourcemanager.Pol
 	resources := []terraformutils.Resource{}
 	for _, b := range policy.Bindings {
 		for _, m := range b.Members {
+			attributes := map[string]string{
+				"role":    b.Role,
+				"project": project,
+				"member":  m,
+			}
+
+			// The resource ID needs to be unique. For conditional bindings,
+			// the role and member are not enough. A hash of the condition could work,
+			// but for simplicity, using the condition title is often sufficient if it's unique.
+			resourceID := b.Role + m
+			if b.Condition != nil {
+				resourceID += b.Condition.Title
+
+				attributes["condition.#"] = "1" // Tell Terraform there is 1 condition block
+				attributes["condition.0.title"] = b.Condition.Title
+				attributes["condition.0.description"] = b.Condition.Description
+				attributes["condition.0.expression"] = b.Condition.Expression
+			}
+
 			resources = append(resources, terraformutils.NewResource(
-				b.Role+m,
-				b.Role+m,
+				resourceID,
+				resourceID,
 				"google_project_iam_member",
 				g.ProviderName,
-				map[string]string{
-					"role":    b.Role,
-					"project": project,
-					"member":  m,
-				},
+				attributes,
 				IamAllowEmptyValues,
-				IamAdditionalFields,
+				map[string]interface{}{},
 			))
 		}
 	}
@@ -134,7 +149,11 @@ func (g *IamGenerator) InitResources() error {
 	if err != nil {
 		return err
 	}
-	rb := &cloudresourcemanager.GetIamPolicyRequest{}
+	rb := &cloudresourcemanager.GetIamPolicyRequest{
+		Options: &cloudresourcemanager.GetPolicyOptions{
+			RequestedPolicyVersion: 3,
+		},
+	}
 	policyResponse, err := cm.Projects.GetIamPolicy(projectID, rb).Context(context.Background()).Do()
 	if err != nil {
 		return err
