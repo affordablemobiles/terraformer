@@ -148,12 +148,13 @@ import (
 )
 
 // Map of supported GCP compute service with code generate
-var ComputeServices = map[string]terraformutils.ServiceGenerator{
-{{ range $key, $value := .services }}
-	"{{$key}}":                   &GCPFacade{service: &{{title $key}}Generator{}},{{ end }}
+func GetComputeServices() map[string]terraformutils.ServiceGenerator {
+	return map[string]terraformutils.ServiceGenerator{
+{{ range $key, $value := .services }}		"{{$key}}":                   &GCPFacade{service: &{{title $key}}Generator{}},
+{{ end }}
 
+	}
 }
-
 `
 
 func main() {
