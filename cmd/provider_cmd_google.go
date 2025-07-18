@@ -1,4 +1,5 @@
 //go:build google || !single_provider
+
 // Copyright 2018 The Terraformer Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,7 +42,7 @@ func newCmdGoogleImporter(options ImportOptions) *cobra.Command {
 				for _, region := range options.Regions {
 					provider := newGoogleProvider()
 					options.PathPattern = originalPathPattern
-					options.PathPattern = strings.ReplaceAll(options.PathPattern, "{provider}/{service}", "{provider}/"+project+"/{service}/"+region)
+					options.PathPattern = strings.ReplaceAll(options.PathPattern, "{service}", project+"/{service}/"+region)
 					log.Println(provider.GetName() + " importing project " + project + " region " + region)
 					err := Import(provider, options, []string{region, project, providerType})
 					if err == gcp_terraforming.InvalidRegion {
