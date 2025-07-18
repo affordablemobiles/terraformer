@@ -43,6 +43,9 @@ func GetRegions(project string) []string {
 	if err != nil {
 		return []string{}
 	}
+	if os.Getenv("GOOGLE_CLOUD_PROJECT") != "" {
+		project = os.Getenv("GOOGLE_CLOUD_PROJECT")
+	}
 	regionsList, err := computeService.Regions.List(project).Do()
 	if err != nil {
 		return []string{}
@@ -62,6 +65,9 @@ func getRegion(project, regionName string) (compute.Region, error) {
 	if err != nil {
 		log.Println(err)
 		return compute.Region{}, fmt.Errorf("failed to get region list: %s", err)
+	}
+	if os.Getenv("GOOGLE_CLOUD_PROJECT") != "" {
+		project = os.Getenv("GOOGLE_CLOUD_PROJECT")
 	}
 	regionsGetCall := computeService.Regions.Get(project, regionName).Fields("name", "zones")
 	region, err := regionsGetCall.Do()
