@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
+	"sync"
 
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 	"google.golang.org/api/compute/v1"
@@ -28,6 +28,11 @@ import (
 
 var (
 	InvalidRegion = errors.New("invalid region specified")
+)
+
+var (
+	regionsCache = &sync.Map{} // Caches the list of regions for a project
+	regionCache  = &sync.Map{} // Caches the details of a specific region
 )
 
 type GCPProvider struct { //nolint
@@ -39,21 +44,32 @@ type GCPProvider struct { //nolint
 }
 
 func GetRegions(project string) []string {
+	// 1. Check the cache first.
+	if cachedRegions, ok := regionsCache.Load(project); ok {
+		return cachedRegions.([]string)
+	}
+
+	// 2. If not in cache, make the API call.
 	computeService, err := compute.NewService(context.Background())
 	if err != nil {
+		log.Printf("ERROR creating compute service: %v", err)
 		return []string{}
 	}
-	if os.Getenv("GOOGLE_CLOUD_PROJECT") != "" {
-		project = os.Getenv("GOOGLE_CLOUD_PROJECT")
-	}
+
 	regionsList, err := computeService.Regions.List(project).Do()
 	if err != nil {
+		log.Printf("ERROR listing regions for project %s: %v", project, err)
 		return []string{}
 	}
+
 	regions := []string{}
 	for _, region := range regionsList.Items {
 		regions = append(regions, region.Name)
 	}
+
+	// 3. Store the result in the cache for next time.
+	regionsCache.Store(project, regions)
+
 	return regions
 }
 
@@ -61,42 +77,57 @@ func getRegion(project, regionName string) (compute.Region, error) {
 	if regionName == "global" {
 		return compute.Region{}, nil
 	}
+
+	cacheKey := fmt.Sprintf("%s-%s", project, regionName)
+
+	// 1. Check the cache first.
+	if cachedRegion, ok := regionCache.Load(cacheKey); ok {
+		return cachedRegion.(compute.Region), nil
+	}
+
+	// 2. If not in cache, make the API call.
 	computeService, err := compute.NewService(context.Background())
 	if err != nil {
-		log.Println(err)
-		return compute.Region{}, fmt.Errorf("failed to get region list: %s", err)
+		return compute.Region{}, fmt.Errorf("failed to create compute service: %w", err)
 	}
-	if os.Getenv("GOOGLE_CLOUD_PROJECT") != "" {
-		project = os.Getenv("GOOGLE_CLOUD_PROJECT")
-	}
-	regionsGetCall := computeService.Regions.Get(project, regionName).Fields("name", "zones")
-	region, err := regionsGetCall.Do()
+
+	region, err := computeService.Regions.Get(project, regionName).Fields("name", "zones").Do()
 	if err != nil {
-		if strings.Contains(err.Error(), "Unknown region") {
-			return compute.Region{}, InvalidRegion
-		}
-		log.Println(err)
-		return compute.Region{}, fmt.Errorf("failed to get region list: %s", err)
+		return compute.Region{}, fmt.Errorf("failed to get region details for %s: %w", regionName, err)
 	}
+
+	// 3. Store the result in the cache for next time.
+	regionCache.Store(cacheKey, *region)
+
 	return *region, nil
 }
 
-// check projectName in env params
 func (p *GCPProvider) Init(args []string) error {
-	projectName := os.Getenv("GOOGLE_CLOUD_PROJECT")
-	if len(args) > 1 {
-		projectName = args[1]
-	}
+	// The main project name for Terraformer to scan, taken from the arguments.
+	projectName := args[1]
 	if projectName == "" {
-		return errors.New("google cloud project name must be set")
+		return errors.New("the project name to scan must be provided as an argument")
 	}
 	p.projectName = projectName
+
+	// Use a separate project for API lookups if the environment variable is set.
+	// This ensures regional lookups run against a project where APIs are enabled.
+	regionalProject := os.Getenv("GOOGLE_CLOUD_PROJECT")
+	if regionalProject == "" {
+		// If the environment variable isn't set, fall back to the main project.
+		regionalProject = projectName
+	}
+
+	log.Printf("Scanning project '%s', using project '%s' for regional API lookups.", p.projectName, regionalProject)
+
+	// Call the region functions using the dedicated regional project ID.
 	var err error
-	p.regions = GetRegions(projectName)
-	p.region, err = getRegion(projectName, args[0])
+	p.regions = GetRegions(regionalProject)
+	p.region, err = getRegion(regionalProject, args[0])
 	if err != nil {
 		return err
 	}
+
 	p.providerType = args[2]
 	return nil
 }
