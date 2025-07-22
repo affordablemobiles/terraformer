@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
@@ -93,6 +94,10 @@ func getRegion(project, regionName string) (compute.Region, error) {
 
 	region, err := computeService.Regions.Get(project, regionName).Fields("name", "zones").Do()
 	if err != nil {
+		if strings.Contains(err.Error(), "Unknown region") {
+			return compute.Region{}, InvalidRegion
+		}
+		log.Println(err)
 		return compute.Region{}, fmt.Errorf("failed to get region details for %s: %w", regionName, err)
 	}
 
