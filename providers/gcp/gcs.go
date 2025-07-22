@@ -40,15 +40,27 @@ type GcsGenerator struct {
 
 func (g *GcsGenerator) createBucketsResources(ctx context.Context, gcsService *storage.Service) []terraformutils.Resource {
 	isGlobal := g.GetArgs()["region"].(compute.Region).Name == "" || g.GetArgs()["region"].(compute.Region).Name == "global"
+	currentRegion := g.GetArgs()["region"].(compute.Region).Name
+	definedRegions := g.GetArgs()["regions"].([]string)
 
 	resources := []terraformutils.Resource{}
 	bucketList := gcsService.Buckets.List(g.GetArgs()["project"].(string))
 	if err := bucketList.Pages(ctx, func(page *storage.Buckets) error {
 		for _, bucket := range page.Items {
-			isBucketRegional := slices.Contains(g.GetArgs()["regions"].([]string), strings.ToLower(bucket.Location))
-			if isGlobal == isBucketRegional {
-				continue
+			bucketLocation := strings.ToLower(bucket.Location)
+
+			if isGlobal {
+				// For a global run, skip any bucket located in a defined region.
+				if slices.Contains(definedRegions, bucketLocation) {
+					continue
+				}
+			} else {
+				// For a regional run, skip any bucket that doesn't match the current region.
+				if bucketLocation != currentRegion {
+					continue
+				}
 			}
+
 			resources = append(resources, terraformutils.NewResource(
 				bucket.Name,
 				bucket.Name,
