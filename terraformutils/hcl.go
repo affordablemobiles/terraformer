@@ -82,7 +82,7 @@ func (v *astSanitizer) visit(n interface{}) {
 	case *ast.LiteralType:
 	case *ast.ListType:
 		if v.sort {
-			//sortHclTree(t.List)
+			sortHclTree(t.List)
 		}
 	case *ast.ObjectType:
 		if v.sort {
@@ -151,7 +151,7 @@ func (v *astSanitizer) visitObjectItem(o *ast.ObjectItem) {
 		}
 	case *ast.ListType:
 		if v.sort {
-			//sortHclTree(t.List)
+			sortHclTree(t.List)
 		}
 	default:
 	}
