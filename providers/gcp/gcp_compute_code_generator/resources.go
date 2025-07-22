@@ -50,9 +50,6 @@ var terraformResources = map[string]gcpResourceRenderable{
 			terraformName: "google_compute_global_forwarding_rule",
 		},
 	},
-	// "globalNetworkEndpointGroups": basicGCPResource{
-	// 	terraformName: "google_compute_global_network_endpoint",
-	// },
 	"healthChecks": basicGCPResource{
 		terraformName: "google_compute_health_check",
 	},
@@ -187,8 +184,5 @@ var terraformResources = map[string]gcpResourceRenderable{
 	},
 	"targetVpnGateways": basicGCPResource{
 		terraformName: "google_compute_vpn_gateway",
-	},
-	"networkEndpointGroups": basicGCPResource{
-		terraformName: "google_compute_network_endpoint_group",
 	},
 }

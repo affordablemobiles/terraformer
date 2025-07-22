@@ -164,6 +164,7 @@ func (p *GCPProvider) InitService(serviceName string, verbose bool) error {
 // GetGCPSupportService return map of support service for GCP
 func (p *GCPProvider) GetSupportedService() map[string]terraformutils.ServiceGenerator {
 	services := GetComputeServices()
+	services["networkEndpointGroups"] = &GCPFacade{service: &NEGGenerator{}}
 	services["bigQuery"] = &GCPFacade{service: &BigQueryGenerator{}}
 	services["cloudFunctions"] = &GCPFacade{service: &CloudFunctionsGenerator{}}
 	services["cloudsql"] = &GCPFacade{service: &CloudSQLGenerator{}}

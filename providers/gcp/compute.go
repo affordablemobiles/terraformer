@@ -40,7 +40,6 @@ func GetComputeServices() map[string]terraformutils.ServiceGenerator {
 		"instanceGroups":              &GCPFacade{service: &InstanceGroupsGenerator{}},
 		"instanceTemplates":           &GCPFacade{service: &InstanceTemplatesGenerator{}},
 		"interconnectAttachments":     &GCPFacade{service: &InterconnectAttachmentsGenerator{}},
-		"networkEndpointGroups":       &GCPFacade{service: &NetworkEndpointGroupsGenerator{}},
 		"networks":                    &GCPFacade{service: &NetworksGenerator{}},
 		"nodeGroups":                  &GCPFacade{service: &NodeGroupsGenerator{}},
 		"nodeTemplates":               &GCPFacade{service: &NodeTemplatesGenerator{}},
