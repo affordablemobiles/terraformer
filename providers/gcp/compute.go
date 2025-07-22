@@ -22,7 +22,6 @@ import (
 // Map of supported GCP compute service with code generate
 func GetComputeServices() map[string]terraformutils.ServiceGenerator {
 	return map[string]terraformutils.ServiceGenerator{
-		"addresses":                   &GCPFacade{service: &AddressesGenerator{}},
 		"autoscalers":                 &GCPFacade{service: &AutoscalersGenerator{}},
 		"backendBuckets":              &GCPFacade{service: &BackendBucketsGenerator{}},
 		"backendServices":             &GCPFacade{service: &BackendServicesGenerator{}},

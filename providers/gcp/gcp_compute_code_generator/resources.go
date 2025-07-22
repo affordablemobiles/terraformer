@@ -16,9 +16,6 @@ package main
 
 // metadata for generate code for GCP compute service
 var terraformResources = map[string]gcpResourceRenderable{
-	"addresses": basicGCPResource{
-		terraformName: "google_compute_address",
-	},
 	"autoscalers": basicGCPResource{
 		terraformName: "google_compute_autoscaler",
 	},

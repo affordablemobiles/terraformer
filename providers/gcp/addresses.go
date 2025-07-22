@@ -4,15 +4,13 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-// AUTO-GENERATED CODE. DO NOT EDIT.
 package gcp
 
 import (
@@ -37,6 +35,11 @@ func (g AddressesGenerator) createResources(ctx context.Context, addressesList *
 	resources := []terraformutils.Resource{}
 	if err := addressesList.Pages(ctx, func(page *compute.AddressList) error {
 		for _, obj := range page.Items {
+			// Ignore serverless IPs in use by Cloud Run.
+			if obj.Purpose == "SERVERLESS" {
+				continue
+			}
+
 			resources = append(resources, terraformutils.NewResource(
 				obj.Name,
 				obj.Name,
