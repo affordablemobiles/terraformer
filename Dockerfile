@@ -5,7 +5,6 @@ WORKDIR /go/src/terraformer
 
 ARG CGO_ENABLED=0
 
-RUN go mod vendor
 RUN go build -v -tags google,single_provider -ldflags "-s -w" -o /go/bin/terraformer
 
 FROM debian:bookworm
