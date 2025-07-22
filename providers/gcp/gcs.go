@@ -99,8 +99,8 @@ func (g *GcsGenerator) createBucketsResources(ctx context.Context, gcsService *s
 			))
 
 			resources = append(resources, terraformutils.NewResource(
-				bucket.Name,
-				bucket.Name,
+				bucket.Name, // The ID for a policy is just the bucket name
+				fmt.Sprintf("%s-iam-policy", bucket.Name), // Unique HCL name
 				"google_storage_bucket_iam_policy",
 				g.ProviderName,
 				map[string]string{
@@ -113,8 +113,8 @@ func (g *GcsGenerator) createBucketsResources(ctx context.Context, gcsService *s
 			if iam, err := gcsService.Buckets.GetIamPolicy(bucket.Name).Do(); err == nil {
 				for _, binding := range iam.Bindings {
 					resources = append(resources, terraformutils.NewResource(
-						bucket.Name,
-						bucket.Name,
+						fmt.Sprintf("%s/%s", bucket.Name, binding.Role),                                       // Unique ID
+						fmt.Sprintf("%s-%s-binding", bucket.Name, strings.ReplaceAll(binding.Role, "/", "-")), // Unique HCL name
 						"google_storage_bucket_iam_binding",
 						g.ProviderName,
 						map[string]string{
@@ -127,8 +127,8 @@ func (g *GcsGenerator) createBucketsResources(ctx context.Context, gcsService *s
 
 					for _, member := range binding.Members {
 						resources = append(resources, terraformutils.NewResource(
-							bucket.Name,
-							bucket.Name,
+							fmt.Sprintf("%s/%s/%s", bucket.Name, binding.Role, member),                                                                    // Unique ID
+							fmt.Sprintf("%s-%s-%s-member", bucket.Name, strings.ReplaceAll(binding.Role, "/", "-"), strings.ReplaceAll(member, ":", "-")), // Unique HCL name
 							"google_storage_bucket_iam_member",
 							g.ProviderName,
 							map[string]string{
