@@ -45,7 +45,7 @@ func OutputHclFiles(resources []terraformutils.Resource, provider terraformutils
 		}},
 	}
 
-	providerDataFile, err := terraformutils.Print(providerData, map[string]struct{}{}, output, sort)
+	providerDataFile, err := terraformutils.Print(providerData, map[string]struct{}{}, output, sort, make(map[string]map[string][]string))
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func OutputHclFiles(resources []terraformutils.Resource, provider terraformutils
 	}
 	if len(outputsByResource) > 0 {
 		outputs["output"] = outputsByResource
-		outputsFile, err := terraformutils.Print(outputs, map[string]struct{}{}, output, sort)
+		outputsFile, err := terraformutils.Print(outputs, map[string]struct{}{}, output, sort, make(map[string]map[string][]string))
 		if err != nil {
 			return err
 		}

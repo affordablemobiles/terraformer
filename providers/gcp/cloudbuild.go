@@ -85,3 +85,15 @@ func (g *CloudBuildGenerator) getLocation() string {
 
 	return "global"
 }
+
+func (g *CloudBuildGenerator) PostConvertHook() error {
+	for i, resource := range g.Resources {
+		if resource.InstanceInfo.Type == "google_cloudbuild_trigger" {
+			// Tell the HCL printer to preserve the order for both the list of 'step' blocks
+			// and the 'args' list found within ANY of those steps.
+			g.Resources[i].PreserveOrder = []string{"build.step", "build.step.args"}
+		}
+	}
+
+	return nil
+}

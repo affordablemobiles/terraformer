@@ -302,7 +302,7 @@ func printService(provider terraformutils.ProviderGenerator, serviceName string,
 			return err
 		}
 		// create Bucket file
-		if bucketStateDataFile, err := terraformutils.Print(bucket.BucketGetTfData(path), map[string]struct{}{}, options.Output, !options.NoSort); err == nil {
+		if bucketStateDataFile, err := terraformutils.Print(bucket.BucketGetTfData(path), map[string]struct{}{}, options.Output, !options.NoSort, make(map[string]map[string][]string)); err == nil {
 			terraformoutput.PrintFile(path+"/bucket.tf", bucketStateDataFile)
 		}
 	} else {
@@ -349,7 +349,7 @@ func printService(provider terraformutils.ProviderGenerator, serviceName string,
 			}
 			// create variables file
 			if len(provider.GetResourceConnections()[serviceName]) > 0 && options.Connect && len(variables["data"]["terraform_remote_state"]) > 0 {
-				variablesFile, err := terraformutils.Print(variables, map[string]struct{}{"config": {}}, options.Output, !options.NoSort)
+				variablesFile, err := terraformutils.Print(variables, map[string]struct{}{"config": {}}, options.Output, !options.NoSort, make(map[string]map[string][]string))
 				if err != nil {
 					return err
 				}
@@ -379,7 +379,7 @@ func printService(provider terraformutils.ProviderGenerator, serviceName string,
 			}
 			// create variables file
 			if options.Connect {
-				variablesFile, err := terraformutils.Print(variables, map[string]struct{}{"config": {}}, options.Output, !options.NoSort)
+				variablesFile, err := terraformutils.Print(variables, map[string]struct{}{"config": {}}, options.Output, !options.NoSort, make(map[string]map[string][]string))
 				if err != nil {
 					return err
 				}

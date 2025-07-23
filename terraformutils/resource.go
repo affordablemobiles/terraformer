@@ -27,12 +27,15 @@ import (
 )
 
 type Resource struct {
-	InstanceInfo      *terraform.InstanceInfo
-	InstanceState     *terraform.InstanceState
-	Outputs           map[string]*terraform.OutputState `json:",omitempty"`
-	ResourceName      string
-	Provider          string
-	Item              map[string]interface{} `json:",omitempty"`
+	InstanceInfo  *terraform.InstanceInfo
+	InstanceState *terraform.InstanceState
+	Outputs       map[string]*terraform.OutputState `json:",omitempty"`
+	ResourceName  string
+	Provider      string
+	Item          map[string]interface{} `json:",omitempty"`
+	// A list of dot-separated paths for attributes where list order must be preserved.
+	// e.g., "build.step" or "build.step.args"
+	PreserveOrder     []string
 	IgnoreKeys        []string               `json:",omitempty"`
 	AllowEmptyValues  []string               `json:",omitempty"`
 	AdditionalFields  map[string]interface{} `json:",omitempty"`
