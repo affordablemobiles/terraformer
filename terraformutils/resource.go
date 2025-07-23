@@ -17,11 +17,13 @@ package terraformutils
 import (
 	"fmt"
 	"log"
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils/providerwrapper"
+	"github.com/hashicorp/terraform/configs/configschema"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -174,11 +176,66 @@ func (r *Resource) ConvertTFstate(provider *providerwrapper.ProviderWrapper) err
 		}
 	}
 	parser := NewFlatmapParser(r.InstanceState.Attributes, ignoreKeys, allowEmptyValues)
-	schema := provider.GetSchema()
-	impliedType := schema.ResourceTypes[r.InstanceInfo.Type].Block.ImpliedType()
-	return r.ParseTFstate(parser, impliedType)
+	pSchema := provider.GetSchema()
+	resourceSchema := pSchema.ResourceTypes[r.InstanceInfo.Type]
+	impliedType := resourceSchema.Block.ImpliedType()
+	if err := r.ParseTFstate(parser, impliedType); err != nil {
+		return err
+	}
+
+	// Add the new call to the cleanup function here, after the state has been parsed into r.Item
+	r.CleanUpOptionalEmptyAttributes(resourceSchema.Block)
+
+	return nil
 }
 
 func (r *Resource) ServiceName() string {
 	return strings.TrimPrefix(r.InstanceInfo.Type, r.Provider+"_")
+}
+
+// CleanUpOptionalEmptyAttributes initiates the cleanup process.
+func (r *Resource) CleanUpOptionalEmptyAttributes(resourceSchema *configschema.Block) {
+	if r.Item == nil || resourceSchema == nil {
+		return
+	}
+
+	// First, handle the special case for the top-level 'project' attribute.
+	// This is done non-recursively to avoid removing 'project' from nested blocks
+	// where it might have a different meaning.
+	if projectSchema, ok := resourceSchema.Attributes["project"]; ok {
+		if projectSchema.Computed {
+			delete(r.Item, "project")
+		}
+	}
+
+	// Now, perform the recursive cleanup for all other optional+empty attributes.
+	cleanOptionalEmptyAttributes(r.Item, resourceSchema)
+}
+
+// cleanOptionalEmptyAttributes is a recursive helper function that traverses the resource data.
+func cleanOptionalEmptyAttributes(data map[string]interface{}, blockSchema *configschema.Block) {
+	for key, value := range data {
+		// Check for the key in attributes
+		if attrSchema, ok := blockSchema.Attributes[key]; ok {
+			// Handle generic optional attributes with zero-values.
+			if attrSchema.Optional {
+				if value == nil || reflect.DeepEqual(value, reflect.Zero(reflect.TypeOf(value)).Interface()) {
+					delete(data, key)
+					continue
+				}
+			}
+		}
+
+		// Check for the key in nested block types
+		if blockTypeSchema, ok := blockSchema.BlockTypes[key]; ok {
+			if list, ok := value.([]interface{}); ok {
+				for _, item := range list {
+					if itemMap, ok := item.(map[string]interface{}); ok {
+						// Recurse into the nested block
+						cleanOptionalEmptyAttributes(itemMap, &blockTypeSchema.Block)
+					}
+				}
+			}
+		}
+	}
 }
