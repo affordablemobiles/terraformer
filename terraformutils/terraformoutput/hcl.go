@@ -16,6 +16,7 @@ package terraformoutput
 import (
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
@@ -24,10 +25,73 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 )
 
+// getExistingTfFiles reads a directory and returns a list of .tf and .tf.json files
+// that are considered resource files and candidates for cleanup.
+func getExistingTfFiles(dirPath string) ([]string, error) {
+	var files []string
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil // Directory doesn't exist, so no files to return
+		}
+		return nil, err
+	}
+
+	for _, entry := range entries {
+		fileName := entry.Name()
+		// Check for both .tf and .tf.json extensions
+		if !entry.IsDir() && (strings.HasSuffix(fileName, ".tf") || strings.HasSuffix(fileName, ".tf.json")) {
+			// Exclude special terraform files from cleanup as they are managed separately
+			// and are not resource-specific files.
+			switch fileName {
+			case "provider.tf", "versions.tf", "outputs.tf", "provider.tf.json", "outputs.tf.json":
+				continue
+			default:
+				files = append(files, filepath.Join(dirPath, fileName))
+			}
+		}
+	}
+	return files, nil
+}
+
+// getAllFilesFromDir reads a directory and returns a list of all files within it.
+func getAllFilesFromDir(dirPath string) ([]string, error) {
+	var files []string
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil // Directory doesn't exist, no files to return
+		}
+		return nil, err
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			files = append(files, filepath.Join(dirPath, entry.Name()))
+		}
+	}
+	return files, nil
+}
+
 func OutputHclFiles(resources []terraformutils.Resource, provider terraformutils.ProviderGenerator, path string, serviceName string, isCompact bool, output string, sort bool) error {
 	if err := os.MkdirAll(path, os.ModePerm); err != nil {
 		return err
 	}
+
+	// Get a list of existing .tf files before we start generating new ones
+	existingTfFiles, err := getExistingTfFiles(path)
+	if err != nil {
+		log.Printf("could not read directory for cleanup %s: %v", path, err)
+	}
+	// Get a list of existing data files
+	existingDataFiles, err := getAllFilesFromDir(filepath.Join(path, "data"))
+	if err != nil {
+		log.Printf("could not read data directory for cleanup %s: %v", path, err)
+	}
+
+	// Keep track of all files generated during this run
+	generatedTfFiles := map[string]bool{}
+	generatedDataFiles := map[string]bool{}
 
 	providerConfig := map[string]interface{}{
 		"version": providerwrapper.GetProviderVersion(provider.GetName()),
@@ -49,7 +113,7 @@ func OutputHclFiles(resources []terraformutils.Resource, provider terraformutils
 	if err != nil {
 		return err
 	}
-	PrintFile(path+"/provider."+GetFileExtension(output), providerDataFile)
+	PrintFile(filepath.Join(path, "provider."+GetFileExtension(output)), providerDataFile)
 
 	// create outputs files
 	outputs := map[string]interface{}{}
@@ -92,7 +156,7 @@ func OutputHclFiles(resources []terraformutils.Resource, provider terraformutils
 		if err != nil {
 			return err
 		}
-		PrintFile(path+"/outputs."+GetFileExtension(output), outputsFile)
+		PrintFile(filepath.Join(path, "outputs."+GetFileExtension(output)), outputsFile)
 	}
 
 	// group by resource by type
@@ -101,35 +165,62 @@ func OutputHclFiles(resources []terraformutils.Resource, provider terraformutils
 		typeOfServices[r.InstanceInfo.Type] = append(typeOfServices[r.InstanceInfo.Type], r)
 	}
 	if isCompact {
-		err := printFile(resources, "resources", path, output, sort)
+		filePath := filepath.Join(path, "resources."+GetFileExtension(output))
+		err := printFile(resources, "resources", path, output, sort, generatedDataFiles)
 		if err != nil {
 			return err
 		}
+		generatedTfFiles[filePath] = true
 	} else {
 		for k, v := range typeOfServices {
 			fileName := strings.ReplaceAll(k, strings.Split(k, "_")[0]+"_", "")
-			err := printFile(v, fileName, path, output, sort)
+			filePath := filepath.Join(path, fileName+"."+GetFileExtension(output))
+			err := printFile(v, fileName, path, output, sort, generatedDataFiles)
 			if err != nil {
 				return err
+			}
+			generatedTfFiles[filePath] = true
+		}
+	}
+
+	// Delete stale .tf files that were not generated in this run
+	for _, filePath := range existingTfFiles {
+		if !generatedTfFiles[filePath] {
+			log.Printf("removing stale file: %s", filePath)
+			if err := os.Remove(filePath); err != nil {
+				log.Printf("failed to remove stale file %s: %v", filePath, err)
+			}
+		}
+	}
+
+	// Delete stale data files that were not generated in this run
+	for _, filePath := range existingDataFiles {
+		if !generatedDataFiles[filePath] {
+			log.Printf("removing stale data file: %s", filePath)
+			if err := os.Remove(filePath); err != nil {
+				log.Printf("failed to remove stale data file %s: %v", filePath, err)
 			}
 		}
 	}
 	return nil
 }
 
-func printFile(v []terraformutils.Resource, fileName, path, output string, sort bool) error {
+func printFile(v []terraformutils.Resource, fileName, path, output string, sort bool, generatedDataFiles map[string]bool) error {
 	for _, res := range v {
 		if res.DataFiles == nil {
 			continue
 		}
-		for fileName, content := range res.DataFiles {
-			if err := os.MkdirAll(path+"/data/", os.ModePerm); err != nil {
+		for dataFileName, content := range res.DataFiles {
+			dataDirPath := filepath.Join(path, "data")
+			if err := os.MkdirAll(dataDirPath, os.ModePerm); err != nil {
 				return err
 			}
-			err := os.WriteFile(path+"/data/"+fileName, content, os.ModePerm)
+			fullDataPath := filepath.Join(dataDirPath, dataFileName)
+			err := os.WriteFile(fullDataPath, content, os.ModePerm)
 			if err != nil {
 				return err
 			}
+			generatedDataFiles[fullDataPath] = true
 		}
 	}
 
@@ -137,7 +228,7 @@ func printFile(v []terraformutils.Resource, fileName, path, output string, sort 
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(path+"/"+fileName+"."+GetFileExtension(output), tfFile, os.ModePerm)
+	err = os.WriteFile(filepath.Join(path, fileName+"."+GetFileExtension(output)), tfFile, os.ModePerm)
 	if err != nil {
 		return err
 	}
