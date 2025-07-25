@@ -21,7 +21,8 @@ import (
 
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 	"google.golang.org/api/compute/v1"
-	"google.golang.org/api/run/v2"
+	"google.golang.org/api/run/v1"
+	runv2 "google.golang.org/api/run/v2"
 )
 
 // CloudRunGenerator generates Terraform resources for Cloud Run.
@@ -44,24 +45,31 @@ func (g *CloudRunGenerator) InitResources() error {
 	if err != nil {
 		return fmt.Errorf("failed to create cloud run service: %w", err)
 	}
+	runServicev2, err := runv2.NewService(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to create cloud run v2 service: %w", err)
+	}
 
-	if err := g.initServices(ctx, runService, project, location); err != nil {
+	if err := g.initServices(ctx, runServicev2, project, location); err != nil {
 		return err
 	}
-	if err := g.initJobs(ctx, runService, project, location); err != nil {
+	if err := g.initJobs(ctx, runServicev2, project, location); err != nil {
 		return err
 	}
-	if err := g.initWorkerPools(ctx, runService, project, location); err != nil {
+	if err := g.initWorkerPools(ctx, runServicev2, project, location); err != nil {
+		return err
+	}
+	if err := g.initDomainMappings(ctx, runService, project, location); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (g *CloudRunGenerator) initServices(ctx context.Context, runService *run.Service, project, location string) error {
+func (g *CloudRunGenerator) initServices(ctx context.Context, runService *runv2.Service, project, location string) error {
 	parent := fmt.Sprintf("projects/%s/locations/%s", project, location)
 	req := runService.Projects.Locations.Services.List(parent)
-	if err := req.Pages(ctx, func(page *run.GoogleCloudRunV2ListServicesResponse) error {
+	if err := req.Pages(ctx, func(page *runv2.GoogleCloudRunV2ListServicesResponse) error {
 		for _, service := range page.Services {
 			parts := strings.Split(service.Name, "/")
 			serviceName := parts[len(parts)-1]
@@ -90,7 +98,7 @@ func (g *CloudRunGenerator) initServices(ctx context.Context, runService *run.Se
 	return nil
 }
 
-func (g *CloudRunGenerator) initServiceIamPolicy(ctx context.Context, runService *run.Service, serviceFullName, serviceName, project, location string) error {
+func (g *CloudRunGenerator) initServiceIamPolicy(ctx context.Context, runService *runv2.Service, serviceFullName, serviceName, project, location string) error {
 	policy, err := runService.Projects.Locations.Services.GetIamPolicy(serviceFullName).Do()
 	if err != nil {
 		return fmt.Errorf("failed to get iam policy for cloud run service %s: %w", serviceName, err)
@@ -118,10 +126,10 @@ func (g *CloudRunGenerator) initServiceIamPolicy(ctx context.Context, runService
 	return nil
 }
 
-func (g *CloudRunGenerator) initJobs(ctx context.Context, runService *run.Service, project, location string) error {
+func (g *CloudRunGenerator) initJobs(ctx context.Context, runService *runv2.Service, project, location string) error {
 	parent := fmt.Sprintf("projects/%s/locations/%s", project, location)
 	req := runService.Projects.Locations.Jobs.List(parent)
-	if err := req.Pages(ctx, func(page *run.GoogleCloudRunV2ListJobsResponse) error {
+	if err := req.Pages(ctx, func(page *runv2.GoogleCloudRunV2ListJobsResponse) error {
 		for _, job := range page.Jobs {
 			parts := strings.Split(job.Name, "/")
 			jobName := parts[len(parts)-1]
@@ -150,7 +158,7 @@ func (g *CloudRunGenerator) initJobs(ctx context.Context, runService *run.Servic
 	return nil
 }
 
-func (g *CloudRunGenerator) initJobIamPolicy(ctx context.Context, runService *run.Service, jobFullName, jobName, project, location string) error {
+func (g *CloudRunGenerator) initJobIamPolicy(ctx context.Context, runService *runv2.Service, jobFullName, jobName, project, location string) error {
 	policy, err := runService.Projects.Locations.Jobs.GetIamPolicy(jobFullName).Do()
 	if err != nil {
 		return fmt.Errorf("failed to get iam policy for cloud run job %s: %w", jobName, err)
@@ -178,10 +186,10 @@ func (g *CloudRunGenerator) initJobIamPolicy(ctx context.Context, runService *ru
 	return nil
 }
 
-func (g *CloudRunGenerator) initWorkerPools(ctx context.Context, runService *run.Service, project, location string) error {
+func (g *CloudRunGenerator) initWorkerPools(ctx context.Context, runService *runv2.Service, project, location string) error {
 	parent := fmt.Sprintf("projects/%s/locations/%s", project, location)
 	req := runService.Projects.Locations.WorkerPools.List(parent)
-	if err := req.Pages(ctx, func(page *run.GoogleCloudRunV2ListWorkerPoolsResponse) error {
+	if err := req.Pages(ctx, func(page *runv2.GoogleCloudRunV2ListWorkerPoolsResponse) error {
 		for _, pool := range page.WorkerPools {
 			parts := strings.Split(pool.Name, "/")
 			poolName := parts[len(parts)-1]
@@ -210,7 +218,7 @@ func (g *CloudRunGenerator) initWorkerPools(ctx context.Context, runService *run
 	return nil
 }
 
-func (g *CloudRunGenerator) initWorkerPoolIamPolicy(ctx context.Context, runService *run.Service, poolFullName, poolName, project, location string) error {
+func (g *CloudRunGenerator) initWorkerPoolIamPolicy(ctx context.Context, runService *runv2.Service, poolFullName, poolName, project, location string) error {
 	policy, err := runService.Projects.Locations.WorkerPools.GetIamPolicy(poolFullName).Do()
 	if err != nil {
 		return fmt.Errorf("failed to get iam policy for cloud run worker pool %s: %w", poolName, err)
@@ -234,6 +242,45 @@ func (g *CloudRunGenerator) initWorkerPoolIamPolicy(ctx context.Context, runServ
 				map[string]interface{}{},
 			))
 		}
+	}
+	return nil
+}
+
+func (g *CloudRunGenerator) initDomainMappings(ctx context.Context, runService *run.APIService, project, location string) error {
+	parent := fmt.Sprintf("projects/%s/locations/%s", project, location)
+	var pageToken string
+	for {
+		req := runService.Projects.Locations.Domainmappings.List(parent)
+		if pageToken != "" {
+			req.Continue(pageToken)
+		}
+
+		page, err := req.Do()
+		if err != nil {
+			return fmt.Errorf("failed to list cloud run domain mappings: %w", err)
+		}
+
+		for _, mapping := range page.Items {
+			id := fmt.Sprintf("locations/%s/namespaces/%s/domainmappings/%s", location, project, mapping.Metadata.Name)
+			g.Resources = append(g.Resources, terraformutils.NewResource(
+				id,
+				mapping.Metadata.Name,
+				"google_cloud_run_domain_mapping",
+				g.ProviderName,
+				map[string]string{
+					"project":  project,
+					"location": location,
+					"name":     mapping.Metadata.Name,
+				},
+				[]string{},
+				map[string]interface{}{},
+			))
+		}
+
+		if page.Metadata == nil || page.Metadata.Continue == "" {
+			break
+		}
+		pageToken = page.Metadata.Continue
 	}
 	return nil
 }
