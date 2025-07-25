@@ -184,8 +184,6 @@ func (g *AppEngineGenerator) initServiceNetworkSettings(ctx context.Context, app
 func (g *AppEngineGenerator) PostConvertHook() error {
 	for i, resource := range g.Resources {
 		if resource.InstanceInfo.Type == "google_app_engine_application_url_dispatch_rules" {
-			// Tell the HCL printer to preserve the order for both the list of 'step' blocks
-			// and the 'args' list found within ANY of those steps.
 			g.Resources[i].PreserveOrder = []string{"dispatch_rules"}
 		}
 	}
