@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
@@ -34,7 +35,7 @@ type CloudDNSGenerator struct {
 	GCPService
 }
 
-func (g CloudDNSGenerator) createZonesResources(ctx context.Context, svc *dns.Service, project string) []terraformutils.Resource {
+func (g *CloudDNSGenerator) createZonesResources(ctx context.Context, svc *dns.Service, project string) []terraformutils.Resource {
 	resources := []terraformutils.Resource{}
 	managedZonesListCall := svc.ManagedZones.List(project)
 	err := managedZonesListCall.Pages(ctx, func(listDNS *dns.ManagedZonesListResponse) error {
@@ -62,7 +63,8 @@ func (g CloudDNSGenerator) createZonesResources(ctx context.Context, svc *dns.Se
 	}
 	return resources
 }
-func (g CloudDNSGenerator) createRecordsResources(ctx context.Context, svc *dns.Service, project, zoneName string) []terraformutils.Resource {
+
+func (g *CloudDNSGenerator) createRecordsResources(ctx context.Context, svc *dns.Service, project, zoneName string) []terraformutils.Resource {
 	resources := []terraformutils.Resource{}
 	managedRecordsListCall := svc.ResourceRecordSets.List(project, zoneName)
 	err := managedRecordsListCall.Pages(ctx, func(listDNS *dns.ResourceRecordSetsListResponse) error {
@@ -86,7 +88,87 @@ func (g CloudDNSGenerator) createRecordsResources(ctx context.Context, svc *dns.
 	})
 	if err != nil {
 		log.Println(err)
-		return []terraformutils.Resource{}
+	}
+	return resources
+}
+
+func (g *CloudDNSGenerator) createPoliciesResources(ctx context.Context, svc *dns.Service, project string) []terraformutils.Resource {
+	resources := []terraformutils.Resource{}
+	policiesListCall := svc.Policies.List(project)
+	err := policiesListCall.Pages(ctx, func(listDNS *dns.PoliciesListResponse) error {
+		for _, policy := range listDNS.Policies {
+			resources = append(resources, terraformutils.NewResource(
+				policy.Name,
+				policy.Name,
+				"google_dns_policy",
+				g.ProviderName,
+				map[string]string{
+					"name":    policy.Name,
+					"project": project,
+				},
+				cloudDNSAllowEmptyValues,
+				cloudDNSAdditionalFields,
+			))
+		}
+		return nil
+	})
+	if err != nil {
+		log.Println(err)
+	}
+	return resources
+}
+
+func (g *CloudDNSGenerator) createResponsePoliciesResources(ctx context.Context, svc *dns.Service, project string) []terraformutils.Resource {
+	resources := []terraformutils.Resource{}
+	responsePoliciesListCall := svc.ResponsePolicies.List(project)
+	err := responsePoliciesListCall.Pages(ctx, func(listDNS *dns.ResponsePoliciesListResponse) error {
+		for _, responsePolicy := range listDNS.ResponsePolicies {
+			resources = append(resources, terraformutils.NewResource(
+				strconv.FormatInt(responsePolicy.Id, 10),
+				responsePolicy.ResponsePolicyName,
+				"google_dns_response_policy",
+				g.ProviderName,
+				map[string]string{
+					"response_policy_name": responsePolicy.ResponsePolicyName,
+					"project":              project,
+				},
+				cloudDNSAllowEmptyValues,
+				cloudDNSAdditionalFields,
+			))
+			rules := g.createResponsePolicyRulesResources(ctx, svc, project, responsePolicy.ResponsePolicyName)
+			resources = append(resources, rules...)
+		}
+		return nil
+	})
+	if err != nil {
+		log.Println(err)
+	}
+	return resources
+}
+
+func (g *CloudDNSGenerator) createResponsePolicyRulesResources(ctx context.Context, svc *dns.Service, project, responsePolicyName string) []terraformutils.Resource {
+	resources := []terraformutils.Resource{}
+	responsePolicyRulesListCall := svc.ResponsePolicyRules.List(project, responsePolicyName)
+	err := responsePolicyRulesListCall.Pages(ctx, func(listDNS *dns.ResponsePolicyRulesListResponse) error {
+		for _, rule := range listDNS.ResponsePolicyRules {
+			resources = append(resources, terraformutils.NewResource(
+				fmt.Sprintf("projects/%s/responsePolicies/%s/rules/%s", project, responsePolicyName, rule.RuleName),
+				responsePolicyName+"_"+rule.RuleName,
+				"google_dns_response_policy_rule",
+				g.ProviderName,
+				map[string]string{
+					"response_policy": responsePolicyName,
+					"rule_name":       rule.RuleName,
+					"project":         project,
+				},
+				cloudDNSAllowEmptyValues,
+				cloudDNSAdditionalFields,
+			))
+		}
+		return nil
+	})
+	if err != nil {
+		log.Println(err)
 	}
 	return resources
 }
@@ -105,13 +187,16 @@ func (g *CloudDNSGenerator) InitResources() error {
 		return err
 	}
 
-	g.Resources = g.createZonesResources(ctx, svc, project)
+	g.Resources = append(g.Resources, g.createZonesResources(ctx, svc, project)...)
+	g.Resources = append(g.Resources, g.createPoliciesResources(ctx, svc, project)...)
+	g.Resources = append(g.Resources, g.createResponsePoliciesResources(ctx, svc, project)...)
+
 	return nil
 }
 
 func (g *CloudDNSGenerator) PostConvertHook() error {
 	for i, resourceRecord := range g.Resources {
-		if resourceRecord.InstanceInfo.Type == "google_dns_managed_zone" {
+		if resourceRecord.InstanceInfo.Type != "google_dns_record_set" {
 			continue
 		}
 		item := resourceRecord.Item
