@@ -185,6 +185,7 @@ func (p *GCPProvider) GetSupportedService() map[string]terraformutils.ServiceGen
 	services["schedulerJobs"] = &GCPFacade{service: &SchedulerJobsGenerator{}}
 	services["cloudbuild"] = &GCPFacade{service: &CloudBuildGenerator{}}
 	services["appengine"] = &GCPFacade{service: &AppEngineGenerator{}}
+	services["serverlessvpc"] = &GCPFacade{service: &VpcAccessConnectorGenerator{}}
 	services["cloudrun"] = &GCPFacade{service: &CloudRunGenerator{}}
 	services["firestore"] = &GCPFacade{service: &FirestoreGenerator{}}
 	return services
