@@ -19,24 +19,35 @@ import (
 	"log"
 	"strings"
 
-	"google.golang.org/api/compute/v1"
-	"google.golang.org/api/redis/v1"
-
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	"google.golang.org/api/compute/v1"
+	"google.golang.org/api/memcache/v1"
+	"google.golang.org/api/redis/v1"
 )
 
-var redisAllowEmptyValues = []string{""}
+var (
+	memoryStoreAllowEmptyValues = []string{""}
+	memoryStoreAdditionalFields = map[string]interface{}{}
+)
 
-var redisAdditionalFields = map[string]interface{}{}
-
+// MemoryStoreGenerator holds all the logic for generating memory store resources
 type MemoryStoreGenerator struct {
 	GCPService
 }
 
-// Run on redisInstancesList and create for each TerraformResource
-func (g MemoryStoreGenerator) createResources(ctx context.Context, redisInstancesList *redis.ProjectsLocationsInstancesListCall) []terraformutils.Resource {
+// createRedisInstanceResources creates terraform resources for `google_redis_instance`.
+// Note: The resource `google_memorystore_instance` is a legacy alias for `google_redis_instance`.
+// To align with current best practices and avoid generating conflicting resources, we generate
+// `google_redis_instance`. If you need the legacy resource type, you can manually
+// change the resource type string in the generated files.
+func (g *MemoryStoreGenerator) createRedisInstanceResources(ctx context.Context, redisService *redis.Service) ([]terraformutils.Resource, error) {
 	resources := []terraformutils.Resource{}
-	if err := redisInstancesList.Pages(ctx, func(page *redis.ListInstancesResponse) error {
+	project := g.GetArgs()["project"].(string)
+	region := g.GetArgs()["region"].(compute.Region).Name
+	parent := "projects/" + project + "/locations/" + region
+	call := redisService.Projects.Locations.Instances.List(parent)
+
+	err := call.Pages(ctx, func(page *redis.ListInstancesResponse) error {
 		for _, obj := range page.Instances {
 			t := strings.Split(obj.Name, "/")
 			name := t[len(t)-1]
@@ -47,36 +58,132 @@ func (g MemoryStoreGenerator) createResources(ctx context.Context, redisInstance
 				g.ProviderName,
 				map[string]string{
 					"name":    name,
-					"project": g.GetArgs()["project"].(string),
-					"region":  g.GetArgs()["region"].(compute.Region).Name,
+					"project": project,
+					"region":  region,
 				},
-				redisAllowEmptyValues,
-				redisAdditionalFields,
+				memoryStoreAllowEmptyValues,
+				memoryStoreAdditionalFields,
 			))
 		}
 		return nil
-	}); err != nil {
-		log.Println(err)
+	})
+	if err != nil {
+		return nil, err
 	}
-	return resources
+	return resources, nil
 }
 
-// Generate TerraformResources from GCP API,
-// from each redis create 1 TerraformResource
-// Need Redis name as ID for terraform resource
+// createRedisClusterResources creates terraform resources for `google_redis_cluster`
+func (g *MemoryStoreGenerator) createRedisClusterResources(ctx context.Context, redisService *redis.Service) ([]terraformutils.Resource, error) {
+	resources := []terraformutils.Resource{}
+	project := g.GetArgs()["project"].(string)
+	region := g.GetArgs()["region"].(compute.Region).Name
+	parent := "projects/" + project + "/locations/" + region
+	call := redisService.Projects.Locations.Clusters.List(parent)
+
+	err := call.Pages(ctx, func(page *redis.ListClustersResponse) error {
+		for _, cluster := range page.Clusters {
+			t := strings.Split(cluster.Name, "/")
+			name := t[len(t)-1]
+			resources = append(resources, terraformutils.NewResource(
+				cluster.Name,
+				name,
+				"google_redis_cluster",
+				g.ProviderName,
+				map[string]string{
+					"name":    name,
+					"project": project,
+				},
+				memoryStoreAllowEmptyValues,
+				memoryStoreAdditionalFields,
+			))
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return resources, nil
+}
+
+// createMemcacheInstanceResources creates terraform resources for `google_memcache_instance`
+func (g *MemoryStoreGenerator) createMemcacheInstanceResources(ctx context.Context, memcacheService *memcache.Service) ([]terraformutils.Resource, error) {
+	resources := []terraformutils.Resource{}
+	project := g.GetArgs()["project"].(string)
+	region := g.GetArgs()["region"].(compute.Region).Name
+	parent := "projects/" + project + "/locations/" + region
+	call := memcacheService.Projects.Locations.Instances.List(parent)
+
+	err := call.Pages(ctx, func(page *memcache.ListInstancesResponse) error {
+		if page.Instances == nil {
+			return nil
+		}
+		for _, obj := range page.Instances {
+			t := strings.Split(obj.Name, "/")
+			name := t[len(t)-1]
+			resources = append(resources, terraformutils.NewResource(
+				obj.Name,
+				name,
+				"google_memcache_instance",
+				g.ProviderName,
+				map[string]string{
+					"name":    name,
+					"project": project,
+					"region":  region,
+				},
+				memoryStoreAllowEmptyValues,
+				memoryStoreAdditionalFields,
+			))
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return resources, nil
+}
+
+// InitResources fetches all Memory Store resources for a given region.
 func (g *MemoryStoreGenerator) InitResources() error {
-	if g.GetArgs()["region"].(compute.Region).Name == "" || g.GetArgs()["region"].(compute.Region).Name == "global" {
+	region := g.GetArgs()["region"].(compute.Region).Name
+	if region == "" || region == "global" {
 		return nil
 	}
 
 	ctx := context.Background()
+	var allResources []terraformutils.Resource
+
+	// Redis Service for Redis Instances and Clusters
 	redisService, err := redis.NewService(ctx)
 	if err != nil {
 		return err
 	}
 
-	redisInstancesList := redisService.Projects.Locations.Instances.List("projects/" + g.GetArgs()["project"].(string) + "/locations/" + g.GetArgs()["region"].(compute.Region).Name)
+	redisInstances, err := g.createRedisInstanceResources(ctx, redisService)
+	if err != nil {
+		log.Println(err)
+	}
+	allResources = append(allResources, redisInstances...)
 
-	g.Resources = g.createResources(ctx, redisInstancesList)
+	redisClusters, err := g.createRedisClusterResources(ctx, redisService)
+	if err != nil {
+		log.Println(err)
+	}
+	allResources = append(allResources, redisClusters...)
+
+	// Memcache Service for Memcache Instances
+	memcacheService, err := memcache.NewService(ctx)
+	if err != nil {
+		// Not returning an error because the API might not be enabled for the project.
+		log.Printf("Error creating Memcache service, skipping Memcache instances: %v", err)
+	} else {
+		memcacheInstances, err := g.createMemcacheInstanceResources(ctx, memcacheService)
+		if err != nil {
+			log.Println(err)
+		}
+		allResources = append(allResources, memcacheInstances...)
+	}
+
+	g.Resources = allResources
 	return nil
 }
