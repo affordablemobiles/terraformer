@@ -188,6 +188,7 @@ func (p *GCPProvider) GetSupportedService() map[string]terraformutils.ServiceGen
 	services["serverlessvpc"] = &GCPFacade{service: &VpcAccessConnectorGenerator{}}
 	services["cloudrun"] = &GCPFacade{service: &CloudRunGenerator{}}
 	services["firestore"] = &GCPFacade{service: &FirestoreGenerator{}}
+	services["iap"] = &GCPFacade{service: &IapGenerator{}}
 	return services
 }
 
