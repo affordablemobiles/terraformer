@@ -1,4 +1,4 @@
-FROM golang:1.24 as build-env
+FROM golang:1.25 as build-env
 
 ADD . /go/src/terraformer
 WORKDIR /go/src/terraformer
@@ -7,7 +7,7 @@ ARG CGO_ENABLED=0
 
 RUN go build -v -tags google,single_provider -ldflags "-s -w" -o /go/bin/terraformer
 
-FROM debian:bookworm
+FROM debian:trixie
 
 RUN apt-get update && \
     apt-get dist-upgrade -y && \
