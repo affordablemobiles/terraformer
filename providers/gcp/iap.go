@@ -124,6 +124,9 @@ func (g *IapGenerator) createIapIamMemberResources(resourceID, resourceName, res
 			}
 
 			memberResourceName := fmt.Sprintf("%s-%s-%s", resourceName, terraformutils.TfSanitize(binding.Role), terraformutils.TfSanitize(member))
+			if binding.Condition != nil && binding.Condition.Title != "" {
+				memberResourceName = fmt.Sprintf("%s-%s", memberResourceName, terraformutils.TfSanitize(binding.Condition.Title))
+			}
 
 			resources = append(resources, terraformutils.NewResource(
 				memberResourceID,
