@@ -208,6 +208,10 @@ func (p *GCPProvider) GetSupportedService() map[string]terraformutils.ServiceGen
 	services["networkSecurity"] = &GCPFacade{service: &NetworkSecurityGenerator{}}
 	services["recaptchaEnterprise"] = &GCPFacade{service: &RecaptchaEnterpriseGenerator{}}
 	services["batch"] = &GCPFacade{service: &BatchGenerator{}}
+	services["resourceManagerLien"] = &GCPFacade{service: &ResourceManagerLienGenerator{}}
+	services["orgPolicy"] = &GCPFacade{service: &OrgPolicyGenerator{}}
+	services["gkeBackup"] = &GCPFacade{service: &GkeBackupGenerator{}}
+	services["databaseMigration"] = &GCPFacade{service: &DatabaseMigrationGenerator{}}
 	return services
 }
 
@@ -273,11 +277,13 @@ func (GCPProvider) GetResourceConnections() map[string]map[string][]string {
 	}
 }
 func (p GCPProvider) GetProviderData(arg ...string) map[string]interface{} {
+	providerConfig := map[string]interface{}{
+		"project": p.projectName,
+	}
+
 	return map[string]interface{}{
 		"provider": map[string]interface{}{
-			p.GetName(): map[string]interface{}{
-				"project": p.projectName,
-			},
+			p.GetName(): providerConfig,
 		},
 	}
 }

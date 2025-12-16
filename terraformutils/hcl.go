@@ -198,6 +198,7 @@ func (v *astSanitizer) handleHeredoc(t *ast.LiteralType) {
 		t.Token.Text = t.Token.Text[:len(t.Token.Text)-1]
 		t.Token.Text = strings.ReplaceAll(t.Token.Text, `\n`, "\n")
 		t.Token.Text = strings.ReplaceAll(t.Token.Text, `\t`, "")
+		t.Token.Text = strings.ReplaceAll(t.Token.Text, `\"`, "\"")
 		t.Token.Type = 10
 		// check if text json for Unquote and Indent
 		jsonTest := t.Token.Text
