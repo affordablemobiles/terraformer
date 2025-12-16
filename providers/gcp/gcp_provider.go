@@ -200,6 +200,14 @@ func (p *GCPProvider) GetSupportedService() map[string]terraformutils.ServiceGen
 	services["externalVpnGateways"] = &GCPFacade{service: &ExternalVpnGatewayGenerator{}}
 	services["vpnTunnels"] = &GCPFacade{service: &VpnTunnelGenerator{}}
 	services["project_services"] = &GCPFacade{service: &ServiceUsageGenerator{}}
+	services["workflows"] = &GCPFacade{service: &WorkflowsGenerator{}}
+	services["eventarc"] = &GCPFacade{service: &EventarcGenerator{}}
+	services["clouddomains"] = &GCPFacade{service: &CloudDomainsGenerator{}}
+	services["certificatemanager"] = &GCPFacade{service: &CertificateManagerGenerator{}}
+	services["workloadIdentity"] = &GCPFacade{service: &WorkloadIdentityGenerator{}}
+	services["networkSecurity"] = &GCPFacade{service: &NetworkSecurityGenerator{}}
+	services["recaptchaEnterprise"] = &GCPFacade{service: &RecaptchaEnterpriseGenerator{}}
+	services["batch"] = &GCPFacade{service: &BatchGenerator{}}
 	return services
 }
 
@@ -258,6 +266,9 @@ func (GCPProvider) GetResourceConnections() map[string]map[string][]string {
 				"path_matcher.default_service", "self_link",
 				"path_matcher.path_rule.service", "self_link",
 			},
+		},
+		"networkSecurity": {
+			"certificatemanager": []string{"mtls_policy.client_validation_trust_config", "id"},
 		},
 	}
 }
