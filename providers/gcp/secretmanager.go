@@ -22,8 +22,8 @@ import (
 
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 	"google.golang.org/api/compute/v1"
-	secretmanager "google.golang.org/api/secretmanager/v1"
 	"google.golang.org/api/option"
+	secretmanager "google.golang.org/api/secretmanager/v1"
 )
 
 // SecretManagerGenerator is a generator for Secret Manager resources.
