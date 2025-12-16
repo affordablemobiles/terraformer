@@ -11,11 +11,11 @@ FROM debian:trixie
 
 RUN apt-get update && \
     apt-get dist-upgrade -y && \
-    apt-get install -y wget curl rsync git gnupg software-properties-common apt-transport-https && \
+    apt-get install -y wget curl rsync git gnupg lsb-release && \
     wget -O- https://apt.releases.hashicorp.com/gpg | \ 
         gpg --dearmor | \ 
         tee /usr/share/keyrings/hashicorp-archive-keyring.gpg && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | \
         tee /etc/apt/sources.list.d/hashicorp.list && \
     curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | \
         gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg && \
