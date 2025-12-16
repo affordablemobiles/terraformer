@@ -24,6 +24,7 @@ import (
 	"sync"
 
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	"github.com/zclconf/go-cty/cty"
 	"google.golang.org/api/compute/v1"
 )
 
@@ -260,4 +261,23 @@ func (p GCPProvider) GetProviderData(arg ...string) map[string]interface{} {
 			},
 		},
 	}
+}
+
+// GetConfig constructs the configuration object passed to the Google Provider.
+// This is critical for v7+ to initialize the transport config and UserAgent,
+// preventing "Value Conversion Errors" and segfaults.
+func (p *GCPProvider) GetConfig() cty.Value {
+	config := map[string]cty.Value{
+		"project": cty.StringVal(p.projectName),
+	}
+
+	if p.region.Name != "" && p.region.Name != "global" {
+		config["region"] = cty.StringVal(p.region.Name)
+	}
+
+	return cty.ObjectVal(config)
+}
+
+func (p *GCPProvider) GetBasicConfig() cty.Value {
+	return p.GetConfig()
 }
