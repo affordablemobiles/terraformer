@@ -105,23 +105,20 @@ func (g *CloudRunGenerator) initServiceIamPolicy(ctx context.Context, runService
 	}
 
 	for _, binding := range policy.Bindings {
-		for _, member := range binding.Members {
-			g.Resources = append(g.Resources, terraformutils.NewResource(
-				fmt.Sprintf("%s/%s/%s", serviceFullName, binding.Role, member),
-				fmt.Sprintf("%s-%s-%s", serviceName, binding.Role, member),
-				"google_cloud_run_v2_service_iam_member",
-				g.ProviderName,
-				map[string]string{
-					"project":  project,
-					"location": location,
-					"name":     serviceName,
-					"role":     binding.Role,
-					"member":   member,
-				},
-				[]string{},
-				map[string]interface{}{},
-			))
+		attributes := map[string]string{
+			"project":  project,
+			"location": location,
+			"name":     serviceName,
 		}
+		conditionTitle := ""
+		conditionDescription := ""
+		conditionExpression := ""
+		if binding.Condition != nil {
+			conditionTitle = binding.Condition.Title
+			conditionDescription = binding.Condition.Description
+			conditionExpression = binding.Condition.Expression
+		}
+		g.Resources = append(g.Resources, g.CreateIamMemberResources(serviceFullName, serviceName, "google_cloud_run_v2_service_iam_member", attributes, binding.Role, binding.Members, conditionTitle, conditionDescription, conditionExpression)...)
 	}
 	return nil
 }
@@ -165,23 +162,20 @@ func (g *CloudRunGenerator) initJobIamPolicy(ctx context.Context, runService *ru
 	}
 
 	for _, binding := range policy.Bindings {
-		for _, member := range binding.Members {
-			g.Resources = append(g.Resources, terraformutils.NewResource(
-				fmt.Sprintf("%s/%s/%s", jobFullName, binding.Role, member),
-				fmt.Sprintf("%s-%s-%s", jobName, binding.Role, member),
-				"google_cloud_run_v2_job_iam_member",
-				g.ProviderName,
-				map[string]string{
-					"project":  project,
-					"location": location,
-					"name":     jobName,
-					"role":     binding.Role,
-					"member":   member,
-				},
-				[]string{},
-				map[string]interface{}{},
-			))
+		attributes := map[string]string{
+			"project":  project,
+			"location": location,
+			"name":     jobName,
 		}
+		conditionTitle := ""
+		conditionDescription := ""
+		conditionExpression := ""
+		if binding.Condition != nil {
+			conditionTitle = binding.Condition.Title
+			conditionDescription = binding.Condition.Description
+			conditionExpression = binding.Condition.Expression
+		}
+		g.Resources = append(g.Resources, g.CreateIamMemberResources(jobFullName, jobName, "google_cloud_run_v2_job_iam_member", attributes, binding.Role, binding.Members, conditionTitle, conditionDescription, conditionExpression)...)
 	}
 	return nil
 }
@@ -225,23 +219,20 @@ func (g *CloudRunGenerator) initWorkerPoolIamPolicy(ctx context.Context, runServ
 	}
 
 	for _, binding := range policy.Bindings {
-		for _, member := range binding.Members {
-			g.Resources = append(g.Resources, terraformutils.NewResource(
-				fmt.Sprintf("%s/%s/%s", poolFullName, binding.Role, member),
-				fmt.Sprintf("%s-%s-%s", poolName, binding.Role, member),
-				"google_cloud_run_v2_worker_pool_iam_member",
-				g.ProviderName,
-				map[string]string{
-					"project":  project,
-					"location": location,
-					"name":     poolName,
-					"role":     binding.Role,
-					"member":   member,
-				},
-				[]string{},
-				map[string]interface{}{},
-			))
+		attributes := map[string]string{
+			"project":  project,
+			"location": location,
+			"name":     poolName,
 		}
+		conditionTitle := ""
+		conditionDescription := ""
+		conditionExpression := ""
+		if binding.Condition != nil {
+			conditionTitle = binding.Condition.Title
+			conditionDescription = binding.Condition.Description
+			conditionExpression = binding.Condition.Expression
+		}
+		g.Resources = append(g.Resources, g.CreateIamMemberResources(poolFullName, poolName, "google_cloud_run_v2_worker_pool_iam_member", attributes, binding.Role, binding.Members, conditionTitle, conditionDescription, conditionExpression)...)
 	}
 	return nil
 }

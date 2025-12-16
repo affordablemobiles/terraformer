@@ -96,46 +96,27 @@ func (g *SecretManagerGenerator) createSecretIamMemberResources(resourceID, reso
 	}
 
 	for _, binding := range bindings {
-		for _, member := range binding.Members {
-			attributes := map[string]string{
-				"project":   g.GetArgs()["project"].(string),
-				"secret_id": resourceName,
-				"role":      binding.Role,
-				"member":    member,
-			}
-			if isRegional {
-				// Extract region from the resource ID
-				parts := strings.Split(resourceID, "/")
-				if len(parts) > 3 {
-					attributes["location"] = parts[3]
-				}
-			}
-
-			var memberResourceID string
-			// The terraform provider expects the import ID for IAM members to be space-delimited.
-			if binding.Condition != nil && binding.Condition.Title != "" {
-				// For conditional bindings, the condition title is the fourth part of the ID.
-				memberResourceID = fmt.Sprintf("%s %s %s %s", resourceID, binding.Role, member, binding.Condition.Title)
-				attributes["condition.#"] = "1"
-				attributes["condition.0.title"] = binding.Condition.Title
-				attributes["condition.0.description"] = binding.Condition.Description
-				attributes["condition.0.expression"] = binding.Condition.Expression
-			} else {
-				memberResourceID = fmt.Sprintf("%s %s %s", resourceID, binding.Role, member)
-			}
-
-			memberResourceName := fmt.Sprintf("%s-%s-%s", resourceName, terraformutils.TfSanitize(binding.Role), terraformutils.TfSanitize(member))
-
-			resources = append(resources, terraformutils.NewResource(
-				memberResourceID,
-				memberResourceName,
-				resourceType,
-				g.ProviderName,
-				attributes,
-				[]string{},
-				map[string]interface{}{},
-			))
+		attributes := map[string]string{
+			"project":   g.GetArgs()["project"].(string),
+			"secret_id": resourceName,
 		}
+		if isRegional {
+			// Extract region from the resource ID
+			parts := strings.Split(resourceID, "/")
+			if len(parts) > 3 {
+				attributes["location"] = parts[3]
+			}
+		}
+
+		conditionTitle := ""
+		conditionDescription := ""
+		conditionExpression := ""
+		if binding.Condition != nil {
+			conditionTitle = binding.Condition.Title
+			conditionDescription = binding.Condition.Description
+			conditionExpression = binding.Condition.Expression
+		}
+		resources = append(resources, g.CreateIamMemberResources(resourceID, resourceName, resourceType, attributes, binding.Role, binding.Members, conditionTitle, conditionDescription, conditionExpression)...)
 	}
 	return resources
 }

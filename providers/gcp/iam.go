@@ -92,36 +92,18 @@ func (g *IamGenerator) createIamCustomRoleResources(rolesResponse *adminpb.ListR
 func (g *IamGenerator) createIamMemberResources(policy *cloudresourcemanager.Policy, project string) []terraformutils.Resource {
 	resources := []terraformutils.Resource{}
 	for _, b := range policy.Bindings {
-		for _, m := range b.Members {
-			attributes := map[string]string{
-				"role":    b.Role,
-				"project": project,
-				"member":  m,
-			}
-
-			// The resource ID needs to be unique. For conditional bindings,
-			// the role and member are not enough. A hash of the condition could work,
-			// but for simplicity, using the condition title is often sufficient if it's unique.
-			resourceID := b.Role + m
-			if b.Condition != nil {
-				resourceID += b.Condition.Title
-
-				attributes["condition.#"] = "1" // Tell Terraform there is 1 condition block
-				attributes["condition.0.title"] = b.Condition.Title
-				attributes["condition.0.description"] = b.Condition.Description
-				attributes["condition.0.expression"] = b.Condition.Expression
-			}
-
-			resources = append(resources, terraformutils.NewResource(
-				resourceID,
-				resourceID,
-				"google_project_iam_member",
-				g.ProviderName,
-				attributes,
-				IamAllowEmptyValues,
-				map[string]interface{}{},
-			))
+		attributes := map[string]string{
+			"project": project,
 		}
+		conditionTitle := ""
+		conditionDescription := ""
+		conditionExpression := ""
+		if b.Condition != nil {
+			conditionTitle = b.Condition.Title
+			conditionDescription = b.Condition.Description
+			conditionExpression = b.Condition.Expression
+		}
+		resources = append(resources, g.CreateIamMemberResources(project, project, "google_project_iam_member", attributes, b.Role, b.Members, conditionTitle, conditionDescription, conditionExpression)...)
 	}
 
 	return resources

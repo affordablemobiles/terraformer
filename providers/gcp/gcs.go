@@ -125,21 +125,15 @@ func (g *GcsGenerator) createBucketsResources(ctx context.Context, gcsService *s
 						GcsAdditionalFields,
 					))
 
-					for _, member := range binding.Members {
-						resources = append(resources, terraformutils.NewResource(
-							fmt.Sprintf("%s/%s/%s", bucket.Name, binding.Role, member),                                                                    // Unique ID
-							fmt.Sprintf("%s-%s-%s-member", bucket.Name, strings.ReplaceAll(binding.Role, "/", "-"), strings.ReplaceAll(member, ":", "-")), // Unique HCL name
-							"google_storage_bucket_iam_member",
-							g.ProviderName,
-							map[string]string{
-								"bucket": bucket.Name,
-								"role":   binding.Role,
-								"member": member,
-							},
-							GcsAllowEmptyValues,
-							GcsAdditionalFields,
-						))
+					conditionTitle := ""
+					conditionDescription := ""
+					conditionExpression := ""
+					if binding.Condition != nil {
+						conditionTitle = binding.Condition.Title
+						conditionDescription = binding.Condition.Description
+						conditionExpression = binding.Condition.Expression
 					}
+					resources = append(resources, g.CreateIamMemberResources("b/"+bucket.Name, bucket.Name, "google_storage_bucket_iam_member", map[string]string{"bucket": bucket.Name}, binding.Role, binding.Members, conditionTitle, conditionDescription, conditionExpression)...)
 				}
 			}
 

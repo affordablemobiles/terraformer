@@ -15,6 +15,8 @@
 package gcp
 
 import (
+	"fmt"
+
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 )
 
@@ -29,4 +31,48 @@ func (s *GCPService) applyCustomProviderType(resources []terraformutils.Resource
 		editedResources = append(editedResources, r)
 	}
 	return editedResources
+}
+
+// CreateIamMemberResources creates terraform resources for each member of a role binding.
+// It handles conditional bindings by appending the condition title to the resource name.
+func (s *GCPService) CreateIamMemberResources(resourceID, resourceName, resourceType string, attributes map[string]string, role string, members []string, conditionTitle, conditionDescription, conditionExpression string) []terraformutils.Resource {
+	var resources []terraformutils.Resource
+	for _, member := range members {
+		memberAttributes := map[string]string{
+			"role":   role,
+			"member": member,
+		}
+		for k, v := range attributes {
+			memberAttributes[k] = v
+		}
+
+		var memberResourceID string
+		// The terraform provider expects the import ID for IAM members to be space-delimited.
+		if conditionTitle != "" {
+			// For conditional bindings, the condition title is the fourth part of the ID.
+			memberResourceID = fmt.Sprintf("%s %s %s %s", resourceID, role, member, conditionTitle)
+			memberAttributes["condition.#"] = "1"
+			memberAttributes["condition.0.title"] = conditionTitle
+			memberAttributes["condition.0.description"] = conditionDescription
+			memberAttributes["condition.0.expression"] = conditionExpression
+		} else {
+			memberResourceID = fmt.Sprintf("%s %s %s", resourceID, role, member)
+		}
+
+		memberResourceName := fmt.Sprintf("%s-%s-%s", resourceName, terraformutils.TfSanitize(role), terraformutils.TfSanitize(member))
+		if conditionTitle != "" {
+			memberResourceName = fmt.Sprintf("%s-%s", memberResourceName, terraformutils.TfSanitize(conditionTitle))
+		}
+
+		resources = append(resources, terraformutils.NewResource(
+			memberResourceID,
+			memberResourceName,
+			resourceType,
+			s.ProviderName,
+			memberAttributes,
+			[]string{},
+			map[string]interface{}{},
+		))
+	}
+	return resources
 }

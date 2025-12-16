@@ -186,11 +186,19 @@ func (p *GCPProvider) GetSupportedService() map[string]terraformutils.ServiceGen
 	services["schedulerJobs"] = &GCPFacade{service: &SchedulerJobsGenerator{}}
 	services["cloudbuild"] = &GCPFacade{service: &CloudBuildGenerator{}}
 	services["appengine"] = &GCPFacade{service: &AppEngineGenerator{}}
+	services["artifactRegistry"] = &GCPFacade{service: &ArtifactRegistryGenerator{}}
 	services["serverlessvpc"] = &GCPFacade{service: &VpcAccessConnectorGenerator{}}
+	services["spanner"] = &GCPFacade{service: &SpannerGenerator{}}
 	services["cloudrun"] = &GCPFacade{service: &CloudRunGenerator{}}
+	services["filestore"] = &GCPFacade{service: &FilestoreGenerator{}}
 	services["firestore"] = &GCPFacade{service: &FirestoreGenerator{}}
 	services["iap"] = &GCPFacade{service: &IapGenerator{}}
 	services["secretmanager"] = &GCPFacade{service: &SecretManagerGenerator{}}
+	services["vpnGateways"] = &GCPFacade{service: &VpnGatewaysGenerator{}}
+	services["vpcPeering"] = &GCPFacade{service: &VpcPeeringGenerator{}}
+	services["routerNat"] = &GCPFacade{service: &RouterNatGenerator{}}
+	services["externalVpnGateways"] = &GCPFacade{service: &ExternalVpnGatewayGenerator{}}
+	services["vpnTunnels"] = &GCPFacade{service: &VpnTunnelGenerator{}}
 	services["project_services"] = &GCPFacade{service: &ServiceUsageGenerator{}}
 	return services
 }
